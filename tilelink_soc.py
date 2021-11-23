@@ -1,84 +1,15 @@
-import struct
 from nmigen import *
 from nmigen.back import rtlil, cxxrtl, verilog
 from nmigen.sim import Simulator, Passive
 from nmigen.cli import main_parser
-from nmigen.utils import log2_int
-from nmigen_soc.memory import MemoryMap
-import tilelink
-from tilelink import TilelinkArbiter, TilelinkDecoder
-from tilelink.peripheral import TilelinkMemory, TilelinkECCMemory
-from tilelink.master import TilelinkInstructionMaster, TilelinkDataMaster
-from tilelink.adapter import TilelinkPartialWriteAdapter
-from core import RISCVCore
 
+from riscv_tilelink import tilelink
+from riscv_tilelink.tilelink import TilelinkArbiter, TilelinkDecoder
+from riscv_tilelink.tilelink.peripheral import TilelinkMemory, TilelinkSimulationPeripheral
+from riscv_tilelink.tilelink.master import TilelinkInstructionMaster, TilelinkDataMaster
+from riscv_tilelink.core import RISCVCore
 
-class TilelinkPeripheral(Elaboratable):
-    def __init__(self, data_width=4, source_id_width=0):
-        self.data_width = data_width
-        self.source_id_width = source_id_width
-
-        self.bus = tilelink.Interface(addr_width=log2_int(4*data_width), data_width=data_width, source_id_width=source_id_width, sink_id_width=0)
-        memory_map = MemoryMap(addr_width=log2_int(4*data_width), data_width=8)
-        memory_map.add_resource(self, name="io", size=4*data_width)
-        self.bus.memory_map = memory_map
-
-        self.output_valid = Signal()
-        self.output = Signal(unsigned(8))
-        self.halt_simulator = Signal()
-
-    def elaborate(self, platform):
-        m = Module()
-
-        # Automatically reset the register to zero
-        m.d.sync += self.output_valid.eq(False)
-
-        # Cycle counter
-        cycle_count = Signal(unsigned(64))
-        m.d.sync += cycle_count.eq(cycle_count + 1)
-
-        # Does the A bus fire in this cycle
-        a_fire = self.bus.a.valid & self.bus.a.ready
-        we = self.bus.a.opcode.matches(tilelink.ChannelAOpcode.PutFullData, tilelink.ChannelAOpcode.PutPartialData)
-
-        for i in range(self.data_width):
-            with m.If(a_fire & we & self.bus.a.mask[i]):
-                with m.Switch(self.bus.a.address):
-                    with m.Case(0):
-                        m.d.sync += [
-                            self.output.word_select(i, 8).eq(self.bus.a.data.word_select(i, 8)),
-                            self.output_valid.eq(True),
-                        ]
-                    with m.Case(4):
-                        m.d.sync += self.halt_simulator.word_select(i, 8).eq(self.bus.a.data.word_select(i, 8))
-                    with m.Case(8):
-                        m.d.sync += cycle_count[0:32].word_select(i, 8).eq(self.bus.a.data.word_select(i, 8))
-                    with m.Case(12):
-                        m.d.sync += cycle_count[32:64].word_select(i, 8).eq(self.bus.a.data.word_select(i, 8))
-
-        # Determine the ready of the input bus
-        m.d.comb += self.bus.a.ready.eq(~self.bus.d.valid | self.bus.d.ready)
-
-        # When channel A fires the response will be valid next cycle
-        with m.If(self.bus.a.ready):
-            m.d.sync += self.bus.d.valid.eq(self.bus.a.valid)
-
-        # Assign the result messages
-        with m.Switch(self.bus.a.opcode):
-            with m.Case(tilelink.ChannelAOpcode.Get):
-                with m.Switch(self.bus.a.address):
-                    with m.Case(0):
-                        m.d.sync += self.bus.tilelink_access_ack_data(data=self.output, size=self.bus.a.size, source=self.bus.a.source)
-                    with m.Case(4):
-                        m.d.sync += self.bus.tilelink_access_ack_data(data=self.halt_simulator, size=self.bus.a.size, source=self.bus.a.source)
-                    with m.Case(8):
-                        m.d.sync += self.bus.tilelink_access_ack_data(data=cycle_count[0:32], size=self.bus.a.size, source=self.bus.a.source)
-                    with m.Case(12):
-                        m.d.sync += self.bus.tilelink_access_ack_data(data=cycle_count[32:64], size=self.bus.a.size, source=self.bus.a.source)
-            with m.Case(tilelink.ChannelAOpcode.PutFullData, tilelink.ChannelAOpcode.PutPartialData):
-                m.d.sync += self.bus.tilelink_access_ack(size=self.bus.a.size, source=self.bus.a.source)
-
-        return m
+from ecc_memory import TilelinkECCMemory
 
 
 class TilelinkSOC(Elaboratable):
@@ -121,14 +52,13 @@ class TilelinkSOC(Elaboratable):
         # Create a ROM and RAM memory
         m.submodules.tl_rom = tl_rom = TilelinkMemory(addr_width=15, data_width=4, source_id_width=tl_rom_arbiter.source_id_width, init=self.firmware, read_only=True)
         m.submodules.tl_ram = tl_ram = TilelinkECCMemory(addr_width=15, data_width=4, source_id_width=tl_ram_arbiter.source_id_width)
-        # m.submodules.tl_ram_pw = tl_ram_pw = TilelinkPartialWriteAdapter(addr_width=15, data_width=4, source_id_width=tl_ram_arbiter.source_id_width)
-        # m.d.comb += tl_ram_pw.out_bus.connect(tl_ram.bus)
 
-        m.submodules.tl_periph = tl_periph = TilelinkPeripheral(source_id_width=tl_data_decoder.source_id_width)
+        m.submodules.tl_periph = tl_periph = TilelinkSimulationPeripheral(source_id_width=tl_data_decoder.source_id_width)
         m.d.comb += [
             self.output.eq(tl_periph.output),
             self.output_valid.eq(tl_periph.output_valid),
             self.halt_simulator.eq(tl_periph.halt_simulator),
+            core.external_interrupt.eq(tl_periph.external_interrupt),
         ]
 
         tl_instr_rom.memory_map = tl_rom.bus.memory_map
@@ -148,7 +78,6 @@ class TilelinkSOC(Elaboratable):
         m.d.comb += data_master.bus.connect(tl_data_decoder.bus)
         m.d.comb += tl_rom_arbiter.bus.connect(tl_rom.bus)
         m.d.comb += tl_ram_arbiter.bus.connect(tl_ram.bus)
-        # m.d.comb += tl_ram_arbiter.bus.connect(tl_ram_pw.in_bus)
 
         return m
 

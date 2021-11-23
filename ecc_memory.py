@@ -1,10 +1,9 @@
-import struct
-from nmigen import *
-from nmigen.utils import log2_int
-from nmigen_soc.memory import MemoryMap
-import tilelink
+from generator.controller import PartialWriteWrapper, WriteBackController
 from generator.error_correction import ExtendedHammingCode
-from generator.controller import PartialWriteWrapper, WriteBackController, BasicController
+from nmigen import *
+from nmigen_soc.memory import MemoryMap
+from riscv_tilelink import tilelink
+
 
 class TilelinkECCMemory(Elaboratable):
     counter = 0
