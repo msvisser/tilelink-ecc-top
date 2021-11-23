@@ -63,29 +63,6 @@ class RISCVCore(Elaboratable):
         with m.If(a_arbitration.firing):
             m.d.sync += a_program_counter.eq(a_program_counter + 4)
 
-        btb_depth = 256
-        btb_depth_bits = log2_int(btb_depth)
-        btb_layout = Layout([
-            ('valid', 1),
-            ('tag', 30 - btb_depth_bits),
-            ('target', 32),
-            ('predictor', 2),
-        ])
-        btb_record = Record(btb_layout)
-
-        a_btb_address = Signal(unsigned(32))
-        m.d.comb += a_btb_address.eq(a_program_counter)
-
-        a_btb = Memory(width=btb_record.shape().width, depth=btb_depth)
-
-        m.submodules.a_btb_read_port = a_btb_read_port = a_btb.read_port(transparent=False)
-        m.d.comb += [
-            a_btb_read_port.addr.eq(a_btb_address[2:2+btb_depth_bits]),
-            a_btb_read_port.en.eq(a_arbitration.moving),
-        ]
-
-        m.submodules.a_btb_write_port = a_btb_write_port = a_btb.write_port()
-
         """
         Instruction Fetch
         """
@@ -97,31 +74,6 @@ class RISCVCore(Elaboratable):
         f_program_counter = Signal(unsigned(32))
         with m.If(f_arbitration.moving):
             m.d.sync += f_program_counter.eq(a_program_counter)
-
-        f_btb_result = Record(btb_layout)
-        f_btb_match = Signal()
-        m.d.comb += [
-            f_btb_result.eq(a_btb_read_port.data),
-            f_btb_match.eq(f_btb_result.valid & (f_btb_result.tag == f_program_counter[2+btb_depth_bits:])),
-        ]
-
-        f_predict_valid = Signal()
-        f_predict_branch_taken = Signal()
-        f_predict_branch_target = Signal(unsigned(32))
-        f_predict_branch_predictor = Signal(unsigned(2))
-        m.d.comb += [
-            f_predict_valid.eq(f_btb_match),
-            f_predict_branch_taken.eq(f_btb_match & f_btb_result.predictor[1]),
-            f_predict_branch_target.eq(f_btb_result.target),
-            f_predict_branch_predictor.eq(f_btb_result.predictor),
-        ]
-
-        with m.If(f_arbitration.firing & f_predict_branch_taken):
-            m.d.sync += [
-                a_program_counter.eq(f_btb_result.target + 4),
-                f_program_counter.eq(f_btb_result.target),
-            ]
-            m.d.comb += a_btb_address.eq(f_btb_result.target)
 
         # Create instruction request
         m.d.comb += [
@@ -139,16 +91,8 @@ class RISCVCore(Elaboratable):
 
         # Program counter
         d_program_counter = Signal(unsigned(32))
-        d_predict_valid = Signal()
-        d_predict_branch_taken = Signal()
-        d_predict_branch_target = Signal(unsigned(32))
-        d_predict_branch_predictor = Signal(unsigned(2))
         with m.If(d_arbitration.moving):
             m.d.sync += d_program_counter.eq(f_program_counter)
-            m.d.sync += d_predict_valid.eq(f_predict_valid)
-            m.d.sync += d_predict_branch_taken.eq(f_predict_branch_taken)
-            m.d.sync += d_predict_branch_target.eq(f_predict_branch_target)
-            m.d.sync += d_predict_branch_predictor.eq(f_predict_branch_predictor)
 
         # Accept instruction response
         m.d.comb += [
@@ -167,6 +111,14 @@ class RISCVCore(Elaboratable):
             decoder.instruction.eq(d_instruction),
             d_control.eq(decoder.control),
         ]
+
+        # Handle branch if always taken
+        with m.If(d_arbitration.firing & (d_control.branch_mode == BranchMode.ALWAYS) & (d_control.branch_type == BranchType.PC_REL)):
+            m.d.comb += [
+                a_arbitration.remove.eq(1),
+                f_arbitration.remove.eq(1),
+            ]
+            m.d.sync += a_program_counter.eq(d_program_counter + d_control.immediate)
 
         # Create the register file
         register_file = Memory(width=32, depth=32, init=[0 for _ in range(32)])
@@ -200,18 +152,10 @@ class RISCVCore(Elaboratable):
         x_program_counter = Signal(unsigned(32))
         x_instruction = Signal(unsigned(32))
         x_control = Record(Control())
-        x_predict_valid = Signal()
-        x_predict_branch_taken = Signal()
-        x_predict_branch_target = Signal(unsigned(32))
-        x_predict_branch_predictor = Signal(unsigned(2))
         with m.If(x_arbitration.moving):
             m.d.sync += x_program_counter.eq(d_program_counter)
             m.d.sync += x_instruction.eq(d_instruction)
             m.d.sync += x_control.eq(d_control)
-            m.d.sync += x_predict_valid.eq(d_predict_valid)
-            m.d.sync += x_predict_branch_taken.eq(d_predict_branch_taken)
-            m.d.sync += x_predict_branch_target.eq(d_predict_branch_target)
-            m.d.sync += x_predict_branch_predictor.eq(d_predict_branch_predictor)
 
         # Register file values
         x_rs1_value_read = Signal(unsigned(32))
@@ -317,7 +261,7 @@ class RISCVCore(Elaboratable):
         # Determine if this is a branch
         x_branch_taken = Signal()
         with m.If(x_control.branch_mode == BranchMode.ALWAYS):
-            m.d.comb += x_branch_taken.eq(1)
+            m.d.comb += x_branch_taken.eq(x_control.branch_type == BranchType.REG_REL)
         with m.Elif(x_control.branch_mode == BranchMode.COND_ZERO):
             m.d.comb += x_branch_taken.eq(x_alu_result == 0)
         with m.Elif(x_control.branch_mode == BranchMode.COND_ONE):
@@ -346,10 +290,6 @@ class RISCVCore(Elaboratable):
         m_rs2_value = Signal(unsigned(32))
         m_branch_taken = Signal()
         m_branch_target = Signal(unsigned(32))
-        m_predict_branch_taken = Signal()
-        m_predict_branch_target = Signal(unsigned(32))
-        m_predict_branch_predictor = Signal(unsigned(2))
-        m_predict_valid = Signal()
         with m.If(m_arbitration.moving):
             m.d.sync += m_program_counter.eq(x_program_counter)
             m.d.sync += m_instruction.eq(x_instruction)
@@ -359,82 +299,16 @@ class RISCVCore(Elaboratable):
             m.d.sync += m_rs2_value.eq(x_rs2_value)
             m.d.sync += m_branch_taken.eq(x_branch_taken)
             m.d.sync += m_branch_target.eq(x_branch_target)
-            m.d.sync += m_predict_branch_taken.eq(x_predict_branch_taken)
-            m.d.sync += m_predict_branch_target.eq(x_predict_branch_target)
-            m.d.sync += m_predict_branch_predictor.eq(x_predict_branch_predictor)
-            m.d.sync += m_predict_valid.eq(x_predict_valid)
-
-        mispredict_counter = Signal(unsigned(32))
-        mispredict_with_history = Signal(unsigned(32))
-        branch_counter = Signal(unsigned(32))
 
         # Handle the branch if taken
-        with m.If(m_arbitration.firing):
-            with m.If(m_branch_taken & ~m_predict_branch_taken):
-                m.d.comb += [
-                    a_arbitration.remove.eq(1),
-                    f_arbitration.remove.eq(1),
-                    d_arbitration.remove.eq(1),
-                    x_arbitration.remove.eq(1),
-                ]
-                m.d.sync += a_program_counter.eq(m_branch_target)
-                m.d.sync += mispredict_counter.eq(mispredict_counter + 1)
-                with m.If(m_predict_valid):
-                    m.d.sync += mispredict_with_history.eq(mispredict_with_history + 1)
-            with m.If(~m_branch_taken & m_predict_branch_taken):
-                m.d.comb += [
-                    a_arbitration.remove.eq(1),
-                    f_arbitration.remove.eq(1),
-                    d_arbitration.remove.eq(1),
-                    x_arbitration.remove.eq(1),
-                ]
-                m.d.sync += a_program_counter.eq(m_program_counter + 4)
-                m.d.sync += mispredict_counter.eq(mispredict_counter + 1)
-                with m.If(m_predict_valid):
-                    m.d.sync += mispredict_with_history.eq(mispredict_with_history + 1)
-            with m.If(m_branch_taken & m_predict_branch_taken & (m_branch_target != m_predict_branch_target)):
-                m.d.comb += [
-                    a_arbitration.remove.eq(1),
-                    f_arbitration.remove.eq(1),
-                    d_arbitration.remove.eq(1),
-                    x_arbitration.remove.eq(1),
-                ]
-                m.d.sync += a_program_counter.eq(m_branch_target)
-                m.d.sync += mispredict_counter.eq(mispredict_counter + 1)
-                with m.If(m_predict_valid):
-                    m.d.sync += mispredict_with_history.eq(mispredict_with_history + 1)
-
-        with m.If(m_arbitration.firing & m_control.branch_mode != BranchMode.NEVER):
-            m.d.sync += branch_counter.eq(branch_counter + 1)
-            m_btb_record = Record(btb_layout)
+        with m.If(m_arbitration.firing & m_branch_taken):
             m.d.comb += [
-                m_btb_record.valid.eq(1),
-                m_btb_record.tag.eq(m_program_counter[2+btb_depth_bits:]),
-                m_btb_record.target.eq(m_branch_target),
+                a_arbitration.remove.eq(1),
+                f_arbitration.remove.eq(1),
+                d_arbitration.remove.eq(1),
+                x_arbitration.remove.eq(1),
             ]
-
-            with m.If(m_predict_valid):
-                with m.If(m_branch_taken):
-                    with m.If(m_predict_branch_predictor != 0b11):
-                        m.d.comb += m_btb_record.predictor.eq(m_predict_branch_predictor + 1)
-                    with m.Else():
-                        m.d.comb += m_btb_record.predictor.eq(0b11)
-                with m.Else():
-                    with m.If(m_predict_branch_predictor != 0b00):
-                        m.d.comb += m_btb_record.predictor.eq(m_predict_branch_predictor - 1)
-                    with m.Else():
-                        m.d.comb += m_btb_record.predictor.eq(0b00)
-            with m.Else():
-                with m.If(m_branch_taken):
-                    m.d.comb += m_btb_record.predictor.eq(0b10)
-                with m.Else():
-                    m.d.comb += m_btb_record.predictor.eq(0b01)
-
-            m.d.comb += [
-                a_btb_write_port.addr.eq(m_program_counter[2:2+btb_depth_bits]),
-                a_btb_write_port.data.eq(m_btb_record),
-                a_btb_write_port.en.eq(1),
-            ]
+            m.d.sync += a_program_counter.eq(m_branch_target)
 
         # Create memory access request
         m.d.comb += [

@@ -123,7 +123,7 @@ class Interface(Record):
             self.d.corrupt.eq(0),
         ]
 
-    def tilelink_access_ack_data(self, data, size, source=0, sink=0):
+    def tilelink_access_ack_data(self, data, size, source=0, sink=0, corrupt=0):
         return [
             self.d.opcode.eq(ChannelDOpcode.AccessAckData),
             self.d.param.eq(0),
@@ -131,6 +131,6 @@ class Interface(Record):
             self.d.source.eq(source),
             self.d.sink.eq(sink),
             self.d.denied.eq(0),
-            self.d.corrupt.eq(0),
+            self.d.corrupt.eq(corrupt),
             self.d.data.eq(data),
         ]

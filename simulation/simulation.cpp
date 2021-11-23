@@ -19,7 +19,7 @@ static cxxrtl::vcd_writer vcd;
 static std::ofstream waves;
 static size_t steps = 0;
 
-/*
+
 namespace cxxrtl_design {
 
 template<size_t DATA_WIDTH>
@@ -98,7 +98,6 @@ std::unique_ptr<bb_p_sim__dmem<39>> bb_p_sim__dmem<39>::create(std::string, meta
 }
 
 }
-*/
 
 // Flip the clock high and low
 void clk() {
@@ -260,8 +259,7 @@ int main(int argc, char *argv[]) {
     std::chrono::duration<double> diff = finish_time - start_time;
     fmt::print(stderr, "Simulation runtime: {:.3f}s\n", diff.count());
 
-/*
-    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<39>*>(top.cell_p_dmem_2e_memory.get())) {
+    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<39>*>(top.cell_p_tl__ram_2e_memory.get())) {
         size_t total_errors = 0;
         for (size_t i = 0; i < p->num_cells; i++) {
             total_errors += p->errors_injected[i];
@@ -287,7 +285,6 @@ int main(int argc, char *argv[]) {
         }
         fmt::print(stderr, "total errors seen: {}\n", total_errors_seen);
     }
-*/
 
     if (clk_cycle == max_cycles) {
         fmt::print("\n");

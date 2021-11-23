@@ -6,8 +6,7 @@ typedef unsigned long long uint64_t;
 typedef int int32_t;
 typedef int size_t;
 
-//volatile uint32_t test = 0;
-volatile uint8_t test_u8 = 0;
+volatile uint32_t test = 0;
 volatile uint8_t test2_u8 = 0x41;
 volatile uint32_t test_mul1 = 123;
 volatile uint32_t test_mul2 = 456;
@@ -55,11 +54,18 @@ int main() {
     }
     *io_out = 0x0a;
 
+    test = 0x12345678;
+    volatile unsigned char *test_u8 = (volatile unsigned char *) &test;
+
+    *test_u8 = 0xff;
+
     for (int i = 0; i < 5; i++) {
         uint16_t c = crc[i];
         hex_print(c);
         *io_out = '\n';
     }
+
+    *test_u8 = 0xab;
 
     uint32_t mul_result = test_mul1 * test_mul2;
     mul_result |= 0x10000000;

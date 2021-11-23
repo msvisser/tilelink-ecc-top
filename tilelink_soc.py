@@ -7,8 +7,9 @@ from nmigen.utils import log2_int
 from nmigen_soc.memory import MemoryMap
 import tilelink
 from tilelink import TilelinkArbiter, TilelinkDecoder
-from tilelink.peripheral import TilelinkMemory, TilelinkUART
+from tilelink.peripheral import TilelinkMemory, TilelinkECCMemory
 from tilelink.master import TilelinkInstructionMaster, TilelinkDataMaster
+from tilelink.adapter import TilelinkPartialWriteAdapter
 from core import RISCVCore
 
 
@@ -119,7 +120,9 @@ class TilelinkSOC(Elaboratable):
 
         # Create a ROM and RAM memory
         m.submodules.tl_rom = tl_rom = TilelinkMemory(addr_width=15, data_width=4, source_id_width=tl_rom_arbiter.source_id_width, init=self.firmware, read_only=True)
-        m.submodules.tl_ram = tl_ram = TilelinkMemory(addr_width=15, data_width=4, source_id_width=tl_ram_arbiter.source_id_width)
+        m.submodules.tl_ram = tl_ram = TilelinkECCMemory(addr_width=15, data_width=4, source_id_width=tl_ram_arbiter.source_id_width)
+        # m.submodules.tl_ram_pw = tl_ram_pw = TilelinkPartialWriteAdapter(addr_width=15, data_width=4, source_id_width=tl_ram_arbiter.source_id_width)
+        # m.d.comb += tl_ram_pw.out_bus.connect(tl_ram.bus)
 
         m.submodules.tl_periph = tl_periph = TilelinkPeripheral(source_id_width=tl_data_decoder.source_id_width)
         m.d.comb += [
@@ -145,6 +148,7 @@ class TilelinkSOC(Elaboratable):
         m.d.comb += data_master.bus.connect(tl_data_decoder.bus)
         m.d.comb += tl_rom_arbiter.bus.connect(tl_rom.bus)
         m.d.comb += tl_ram_arbiter.bus.connect(tl_ram.bus)
+        # m.d.comb += tl_ram_arbiter.bus.connect(tl_ram_pw.in_bus)
 
         return m
 
@@ -154,7 +158,6 @@ if __name__ == "__main__":
     sys.setrecursionlimit(3000)
 
     design = TilelinkSOC(firmware="firmware/test.bin")
-    platform = None
     ports = [design.output, design.output_valid, design.halt_simulator]
     name = "top"
 
@@ -162,7 +165,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.action == "generate":
-        fragment = Fragment.get(design, platform)
+        fragment = Fragment.get(design, "cxxrtl")
         generate_type = args.generate_type
         if generate_type is None and args.generate_file:
             if args.generate_file.name.endswith(".il"):
@@ -185,7 +188,7 @@ if __name__ == "__main__":
             print(output)
 
     if args.action == "simulate":
-        fragment = Fragment.get(design, platform)
+        fragment = Fragment.get(design, "sim")
         sim = Simulator(fragment)
 
         def print_output_process():

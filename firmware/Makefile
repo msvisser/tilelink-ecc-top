@@ -5,11 +5,11 @@ test/main.elf:
 	make -C test
 
 coremark/coremark-perf.bin:
-	make -C coremark clean link PORT_DIR=barebones XCFLAGS=-DPERFORMANCE_RUN=1
+	make -C coremark clean link PORT_DIR=barebones XCFLAGS=-DPERFORMANCE_RUN=1 ITERATIONS=10
 	cp coremark/coremark.bin coremark/coremark-perf.bin
 
 coremark/coremark-val.bin:
-	make -C coremark clean link PORT_DIR=barebones XCFLAGS=-DVALIDATION_RUN=1
+	make -C coremark clean link PORT_DIR=barebones XCFLAGS=-DVALIDATION_RUN=1 ITERATIONS=10
 	cp coremark/coremark.bin coremark/coremark-val.bin
 
 

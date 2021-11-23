@@ -45,7 +45,7 @@ ASFLAGS = -march=rv32im -mabi=ilp32
 OFLAG 	= -o
 COUT 	= -c
 
-LFLAGS_END = /usr/lib/gcc/riscv64-elf/11.1.0/rv32i/ilp32/libgcc.a
+LFLAGS_END = /usr/lib/gcc/riscv64-elf/11.1.0/rv32im/ilp32/libgcc.a
 # Flag : PORT_SRCS
 # 	Port specific source files can be added here
 #	You may also need cvt.c if the fcvt functions are not provided as intrinsics by your compiler!
