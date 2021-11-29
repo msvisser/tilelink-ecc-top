@@ -4,6 +4,7 @@
 #include <backends/cxxrtl/cxxrtl_vcd.h>
 #include <argparse/argparse.hpp>
 #include <fmt/core.h>
+#include <fmt/ostream.h>
 #include "tilelink_soc.h"
 
 // Simulation model
@@ -66,9 +67,9 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
                     size_t current_flips = std::__popcount(memory_flips[addr]);
                     read_with_errors[addr][current_flips]++;
 
-                    if (current_flips > 1) {
-                        fmt::print(stderr, "reading mem[{}] with {} flips\n", addr, current_flips);
-                    }
+                    // if (current_flips > 1) {
+                    //     fmt::print(stderr, "reading mem[{}] with {} flips\n", addr, current_flips);
+                    // }
 
                     this->p_read__data.next.template set<size_t>(memory[addr]);
                 }
@@ -90,11 +91,67 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
 	}
 
     void reset() override {}
+
+    void log(std::ofstream &stderr_log) {
+        size_t total_errors = 0;
+        for (size_t i = 0; i < this->num_cells; i++) {
+            total_errors += this->errors_injected[i];
+        }
+        fmt::print(stderr_log, "total errors injected: {}\n", total_errors);
+
+        size_t total_errors_seen = 0;
+        size_t correctable_reads = 0;
+        size_t uncorrectable_reads = 0;
+        for (size_t i = 0; i < this->num_cells; i++) {
+            if (this->read_accesses[i] || this->write_accesses[i]) {
+                total_errors_seen += this->errors_injected[i];
+                fmt::print(
+                    stderr_log,
+                    "{:4d}: r:{:5d} w:{:5d} e:{:5d} rwe:{:5d} {:5d} {:5d}\n",
+                    i,
+                    this->read_accesses[i],
+                    this->write_accesses[i],
+                    this->errors_injected[i],
+                    this->read_with_errors[i][0],
+                    this->read_with_errors[i][1],
+                    this->read_with_errors[i][2]
+                );
+
+                correctable_reads += this->read_with_errors[i][1];
+                for (size_t j = 2; j < num_bits; j++) {
+                    uncorrectable_reads += this->read_with_errors[i][j];
+                }
+            }
+        }
+        fmt::print(stderr_log, "total errors seen: {}\n", total_errors_seen);
+        fmt::print(stderr_log, "total correctable reads: {}\n", correctable_reads);
+        fmt::print(stderr_log, "total uncorrectable reads: {}\n", uncorrectable_reads);
+    }
 };
+
+template<>
+std::unique_ptr<bb_p_sim__dmem<32>> bb_p_sim__dmem<32>::create(std::string, metadata_map, metadata_map) {
+    return std::make_unique<bb_p_memory_impl<32>>();
+}
+
+template<>
+std::unique_ptr<bb_p_sim__dmem<33>> bb_p_sim__dmem<33>::create(std::string, metadata_map, metadata_map) {
+    return std::make_unique<bb_p_memory_impl<33>>();
+}
+
+template<>
+std::unique_ptr<bb_p_sim__dmem<38>> bb_p_sim__dmem<38>::create(std::string, metadata_map, metadata_map) {
+    return std::make_unique<bb_p_memory_impl<38>>();
+}
 
 template<>
 std::unique_ptr<bb_p_sim__dmem<39>> bb_p_sim__dmem<39>::create(std::string, metadata_map, metadata_map) {
     return std::make_unique<bb_p_memory_impl<39>>();
+}
+
+template<>
+std::unique_ptr<bb_p_sim__dmem<40>> bb_p_sim__dmem<40>::create(std::string, metadata_map, metadata_map) {
+    return std::make_unique<bb_p_memory_impl<40>>();
 }
 
 }
@@ -156,6 +213,20 @@ int main(int argc, char *argv[]) {
     lambda = program.get<double>("--lambda");
     seed = program.get<size_t>("--seed");
 
+    // Create a stdout and stderr log file
+    auto stdout_path = fmt::format("log/{:.0e}-{}-out.txt", lambda, seed);
+    std::ofstream stdout_log(stdout_path);
+    if (!stdout_log.is_open()) {
+        fmt::print(stderr, "Unable to open '{}'\n", stdout_path);
+        return 1;
+    }
+    auto stderr_path = fmt::format("log/{:.0e}-{}-err.txt", lambda, seed);
+    std::ofstream stderr_log(stderr_path);
+    if (!stderr_log.is_open()) {
+        fmt::print(stderr, "Unable to open '{}'\n", stderr_path);
+        return 1;
+    }
+
     // Initialize the top module
     top = cxxrtl_design::p_top();
 
@@ -206,7 +277,7 @@ int main(int argc, char *argv[]) {
         if (input.eof() && j == 0) break;
         top.memory_p_tl__rom_2e_memory[i].set<uint32_t>(data);
     }
-    fmt::print(stderr, "Loaded {} words from firmware file '{}'\n", i, firmware_path);
+    fmt::print(stderr_log, "Loaded {} words from firmware file '{}'\n", i, firmware_path);
 
     // Get the simulation starting time
     auto start_time = std::chrono::steady_clock::now();
@@ -226,12 +297,12 @@ int main(int argc, char *argv[]) {
         // If the debug output port is valid, print an output character
         if (top.p_output__valid.get<bool>()) {
             char c = top.p_output.get<unsigned char>();
-            fmt::print("{}", c);
+            fmt::print(stdout_log, "{}", c);
         }
 
         // Stop the simulation if halt_simulator is asserted
         if (top.p_halt__simulator.get<bool>()) {
-            fmt::print(stderr, "Stopping simulator after {} cycles\n", clk_cycle);
+            fmt::print(stderr_log, "Stopping simulator after {} cycles\n", clk_cycle);
             break;
         }
 
@@ -257,38 +328,27 @@ int main(int argc, char *argv[]) {
     auto finish_time = std::chrono::steady_clock::now();
 
     std::chrono::duration<double> diff = finish_time - start_time;
-    fmt::print(stderr, "Simulation runtime: {:.3f}s\n", diff.count());
+    fmt::print(stderr_log, "Simulation runtime: {:.3f}s\n", diff.count());
 
+    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<32>*>(top.cell_p_tl__ram_2e_memory.get())) {
+        p->log(stderr_log);
+    }
+    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<33>*>(top.cell_p_tl__ram_2e_memory.get())) {
+        p->log(stderr_log);
+    }
+    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<38>*>(top.cell_p_tl__ram_2e_memory.get())) {
+        p->log(stderr_log);
+    }
     if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<39>*>(top.cell_p_tl__ram_2e_memory.get())) {
-        size_t total_errors = 0;
-        for (size_t i = 0; i < p->num_cells; i++) {
-            total_errors += p->errors_injected[i];
-        }
-        fmt::print(stderr, "total errors injected: {}\n", total_errors);
-
-        size_t total_errors_seen = 0;
-        for (size_t i = 0; i < p->num_cells; i++) {
-            if (p->read_accesses[i] || p->write_accesses[i]) {
-                total_errors_seen += p->errors_injected[i];
-                fmt::print(
-                    stderr,
-                    "{:4d}: r:{:5d} w:{:5d} e:{:5d} rwe:{:5d} {:5d} {:5d}\n",
-                    i,
-                    p->read_accesses[i],
-                    p->write_accesses[i],
-                    p->errors_injected[i],
-                    p->read_with_errors[i][0],
-                    p->read_with_errors[i][1],
-                    p->read_with_errors[i][2]
-                );
-            }
-        }
-        fmt::print(stderr, "total errors seen: {}\n", total_errors_seen);
+        p->log(stderr_log);
+    }
+    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<40>*>(top.cell_p_tl__ram_2e_memory.get())) {
+        p->log(stderr_log);
     }
 
     if (clk_cycle == max_cycles) {
-        fmt::print("\n");
-        fmt::print(stderr, "Maximum number of clock cycles reached\n");
+        fmt::print(stdout_log, "\n");
+        fmt::print(stderr_log, "Maximum number of clock cycles reached\n");
         return 1;
     }
 
