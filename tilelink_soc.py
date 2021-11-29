@@ -13,8 +13,10 @@ from ecc_memory import TilelinkECCMemory
 
 
 class TilelinkSOC(Elaboratable):
-    def __init__(self, firmware):
+    def __init__(self, firmware, code_name, controller_name):
         self.firmware = firmware
+        self.code_name = code_name
+        self.controller_name = controller_name
 
         self.output = Signal(unsigned(8))
         self.output_valid = Signal()
@@ -51,7 +53,10 @@ class TilelinkSOC(Elaboratable):
 
         # Create a ROM and RAM memory
         m.submodules.tl_rom = tl_rom = TilelinkMemory(addr_width=15, data_width=4, source_id_width=tl_rom_arbiter.source_id_width, init=self.firmware, read_only=True)
-        m.submodules.tl_ram = tl_ram = TilelinkECCMemory(addr_width=15, data_width=4, source_id_width=tl_ram_arbiter.source_id_width)
+        m.submodules.tl_ram = tl_ram = TilelinkECCMemory(
+            addr_width=15, data_width=4, source_id_width=tl_ram_arbiter.source_id_width,
+            code_name=self.code_name, controller_name=self.controller_name
+        )
 
         m.submodules.tl_periph = tl_periph = TilelinkSimulationPeripheral(source_id_width=tl_data_decoder.source_id_width)
         m.d.comb += [
@@ -86,12 +91,18 @@ if __name__ == "__main__":
     import sys
     sys.setrecursionlimit(3000)
 
-    design = TilelinkSOC(firmware="firmware/test.bin")
+    parser = main_parser()
+    parser.add_argument("--code", default="ExtendedHammingCode")
+    parser.add_argument("--controller", default="WriteBackController")
+    args = parser.parse_args()
+
+    import os
+    dirname = os.path.dirname(__file__)
+    firmware = os.path.join(dirname, 'firmware', 'test.bin')
+
+    design = TilelinkSOC(firmware=firmware, code_name=args.code, controller_name=args.controller)
     ports = [design.output, design.output_valid, design.halt_simulator]
     name = "top"
-
-    parser = main_parser()
-    args = parser.parse_args()
 
     if args.action == "generate":
         fragment = Fragment.get(design, "cxxrtl")
