@@ -1,13 +1,12 @@
 .section .text.start
-.align 1
+.balign 4
 
 .global _start
 _start:
     /* Set up stack pointer and global pointer */
 .option push
 .option norelax
-1:  auipc   gp, %pcrel_hi(__global_pointer$)
-    addi    gp, gp, %pcrel_lo(1b)
+    la      gp, __global_pointer$
 .option pop
     la      sp, __stack_va
 
@@ -15,31 +14,32 @@ _start:
     la      t0, __data_start
     la      t1, __data_end
     la      t2, __data_va
-    j       copy_data_loop_end
-copy_data_loop:
+    bgeu    t0, t1, .L_copy_data_loop_end
+.L_copy_data_loop:
     lw      t3, 0(t0)
     addi    t0, t0, 4
     addi    t2, t2, 4
     sw      t3, -4(t2)
-copy_data_loop_end:
-    bltu    t0, t1, copy_data_loop
+    bltu    t0, t1, .L_copy_data_loop
+.L_copy_data_loop_end:
 
     /* Clear bss sections */
     la      t0, __bss_start
     la      t1, __bss_end
-    j       clear_bss_loop_end
-clear_bss_loop:
+    bgeu    t0, t1, .L_clear_bss_loop_end
+.L_clear_bss_loop:
     sw      zero, 0(t0)
     addi    t0, t0, 4
-clear_bss_loop_end:
-    bltu    t0, t1, clear_bss_loop
+    bltu    t0, t1, .L_clear_bss_loop
+.L_clear_bss_loop_end:
 
     /* Run the main function */
     jal     main
 
+.L_halt_simulator:
     /* Tell the simulator to halt the processor */
-    la      t0, 0x80000000
+    li      t0, 0x80000000
     li      t1, 1
     sw      t1, 4(t0)
-end_loop:
-    j       end_loop
+.L_end_loop:
+    j       .L_end_loop

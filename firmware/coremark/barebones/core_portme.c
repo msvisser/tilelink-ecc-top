@@ -44,20 +44,22 @@ volatile ee_s32 seed5_volatile = 0;
 CORETIMETYPE
 barebones_clock()
 {
-    volatile ee_u32 * const io_time_low = (volatile ee_u32 *)0x80000008;
-    volatile ee_u32 * const io_time_high = (volatile ee_u32 *)0x8000000c;
+    ee_u32 result_temp;
+    ee_u32 result_low;
+    ee_u32 result_high;
 
-    ee_u32 time_low;
-    ee_u32 time_high;
-    ee_u32 time_high_again;
-    do {
-        time_high = *io_time_high;
-        time_low = *io_time_low;
-        time_high_again = *io_time_high;
-    } while (time_high != time_high_again);
+    asm volatile(
+        "1:\n"
+        "    csrr %0, cycleh\n"
+        "    csrr %1, cycle\n"
+        "    csrr %2, cycleh\n"
+        "    bne %0, %2, 1b\n"
+        : "=r" (result_temp), "=r" (result_low), "=r" (result_high)
+    );
 
-    return ((ee_u64) time_low) | (((ee_u64) time_high_again) << 32);
+    return ((ee_u64) result_low) | (((ee_u64) result_high) << 32);
 }
+
 /* Define : TIMER_RES_DIVIDER
         Divider to trade off timer resolution and total time that can be
    measured.
