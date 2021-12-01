@@ -12,6 +12,7 @@ static cxxrtl_design::p_top top;
 
 // Simulation parameters
 static bool vcd_enabled = false;
+static bool log_stdout = false;
 static size_t seed = 0;
 static double lambda = 0.0;
 
@@ -92,7 +93,7 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
 
     void reset() override {}
 
-    void log(std::ofstream &stderr_log) {
+    void log(std::ostream &stderr_log) {
         size_t total_errors = 0;
         for (size_t i = 0; i < this->num_cells; i++) {
             total_errors += this->errors_injected[i];
@@ -186,6 +187,11 @@ int main(int argc, char *argv[]) {
         .default_value(false)
         .implicit_value(true);
 
+    program.add_argument("--stdout")
+        .help("enable logging to stdout/stderr instead of files")
+        .default_value(false)
+        .implicit_value(true);
+
     program.add_argument("-m", "--max-cycles")
         .help("maximum number of clock cycles to simulate")
         .scan<'u', size_t>()
@@ -210,22 +216,39 @@ int main(int argc, char *argv[]) {
     }
 
     vcd_enabled = program.get<bool>("--vcd");
+    log_stdout = program.get<bool>("--stdout");
     lambda = program.get<double>("--lambda");
     seed = program.get<size_t>("--seed");
 
     // Create a stdout and stderr log file
-    auto stdout_path = fmt::format("log/{:.0e}-{}-out.txt", lambda, seed);
-    std::ofstream stdout_log(stdout_path);
-    if (!stdout_log.is_open()) {
-        fmt::print(stderr, "Unable to open '{}'\n", stdout_path);
-        return 1;
+    std::ofstream stdout_of;
+    std::streambuf * stdout_buf;
+    std::ofstream stderr_of;
+    std::streambuf * stderr_buf;
+
+    if (log_stdout) {
+        stdout_buf = std::cout.rdbuf();
+        stderr_buf = std::cerr.rdbuf();
+    } else {
+        auto stdout_path = fmt::format("log/{:.0e}-{}-out.txt", lambda, seed);
+        stdout_of.open(stdout_path);
+        if (!stdout_of.is_open()) {
+            fmt::print(stderr, "Unable to open '{}'\n", stdout_path);
+            return 1;
+        }
+        stdout_buf = stdout_of.rdbuf();
+
+        auto stderr_path = fmt::format("log/{:.0e}-{}-err.txt", lambda, seed);
+        stderr_of.open(stderr_path);
+        if (!stderr_of.is_open()) {
+            fmt::print(stderr, "Unable to open '{}'\n", stderr_path);
+            return 1;
+        }
+        stderr_buf = stderr_of.rdbuf();
     }
-    auto stderr_path = fmt::format("log/{:.0e}-{}-err.txt", lambda, seed);
-    std::ofstream stderr_log(stderr_path);
-    if (!stderr_log.is_open()) {
-        fmt::print(stderr, "Unable to open '{}'\n", stderr_path);
-        return 1;
-    }
+
+    std::ostream stdout_log(stdout_buf);
+    std::ostream stderr_log(stderr_buf);
 
     // Initialize the top module
     top = cxxrtl_design::p_top();
