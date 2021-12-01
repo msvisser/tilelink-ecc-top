@@ -15,6 +15,7 @@ static bool vcd_enabled = false;
 static bool log_stdout = false;
 static size_t seed = 0;
 static double lambda = 0.0;
+static double double_rate = 0.0;
 
 // VCD writer
 static cxxrtl::vcd_writer vcd;
@@ -41,12 +42,16 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
     std::poisson_distribution<size_t> num_flips;
     std::uniform_int_distribution<size_t> memory_cell;
     std::uniform_int_distribution<size_t> memory_bit;
+    std::uniform_int_distribution<size_t> memory_bit_double;
+    std::uniform_real_distribution<double> double_flip;
 
     bb_p_memory_impl() {
         generator = std::mt19937_64(seed);
         num_flips = std::poisson_distribution<size_t>(lambda);
         memory_cell = std::uniform_int_distribution<size_t>(0, num_cells - 1);
         memory_bit = std::uniform_int_distribution<size_t>(0, num_bits - 1);
+        memory_bit_double = std::uniform_int_distribution<size_t>(0, num_bits - 2);
+        double_flip = std::uniform_real_distribution<double>(0.0, 1.0);
     }
 
     bool eval() override {
@@ -78,14 +83,24 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
         } else if (this->negedge_p_clk()) {
             size_t flips = num_flips(generator);
             while(flips--) {
+                // Determine the cell to flip
                 size_t cell = memory_cell(generator);
-                size_t bit = memory_bit(generator);
 
-                memory[cell] ^= (1ull << bit);
-                memory_flips[cell] ^= (1ull << bit);
-
-                errors_injected[cell]++;
-                // fmt::print(stderr, "flipped {}:{}\n", cell, bit);
+                // Determine if this is a double flip
+                double flip_two = double_flip(generator);
+                if (flip_two < double_rate) {
+                    // Flip two adjacent bits
+                    size_t bit = memory_bit_double(generator);
+                    memory[cell] ^= (3ull << bit);
+                    memory_flips[cell] ^= (3ull << bit);
+                    errors_injected[cell] += 2;
+                } else {
+                    // Flip a single bit
+                    size_t bit = memory_bit(generator);
+                    memory[cell] ^= (1ull << bit);
+                    memory_flips[cell] ^= (1ull << bit);
+                    errors_injected[cell]++;
+                }
             }
         }
         return bb_p_sim__dmem<DATA_WIDTH>::eval();
@@ -207,6 +222,11 @@ int main(int argc, char *argv[]) {
         .scan<'g', double>()
         .default_value(0.0);
 
+    program.add_argument("-d", "--double-rate")
+        .help("simulation adjacent error injection frequency")
+        .scan<'g', double>()
+        .default_value(0.0);
+
     try {
         program.parse_args(argc, argv);
     } catch (const std::runtime_error& err) {
@@ -218,6 +238,7 @@ int main(int argc, char *argv[]) {
     vcd_enabled = program.get<bool>("--vcd");
     log_stdout = program.get<bool>("--stdout");
     lambda = program.get<double>("--lambda");
+    double_rate = program.get<double>("--double-rate");
     seed = program.get<size_t>("--seed");
 
     // Create a stdout and stderr log file
