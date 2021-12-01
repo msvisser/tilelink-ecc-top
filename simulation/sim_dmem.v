@@ -1,5 +1,5 @@
 (* cxxrtl_blackbox, cxxrtl_template = "DATA_WIDTH" *)
-module sim_dmem(clk, rst, clk_en, addr, write_en, write_data, read_data);
+module sim_dmem(clk, rst, clk_en, addr, write_en, write_data, read_data, error, uncorrectable_error);
     parameter ADDR_WIDTH = 13;
     parameter DATA_WIDTH = 0;
 
@@ -15,4 +15,7 @@ module sim_dmem(clk, rst, clk_en, addr, write_en, write_data, read_data);
     input [DATA_WIDTH-1:0] write_data;
     (* cxxrtl_width = "DATA_WIDTH" *)
     output [DATA_WIDTH-1:0] read_data;
+
+    input error;
+    input uncorrectable_error;
 endmodule

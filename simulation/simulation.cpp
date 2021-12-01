@@ -36,7 +36,12 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
     size_t write_accesses[num_cells];
 
     size_t errors_injected[num_cells];
-    size_t read_with_errors[num_cells][num_bits];
+    size_t read_clean[num_cells];
+    size_t read_correctable[num_cells];
+    size_t read_uncorrectable[num_cells];
+
+    bool prev_valid = false;
+    size_t prev_addr = 0;
 
     std::mt19937_64 generator;
     std::poisson_distribution<size_t> num_flips;
@@ -61,26 +66,39 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
                 bool write_en = this->p_write__en.template get<bool>();
 
                 if (write_en) {
-                    size_t value = this->p_write__data.template get<size_t>();
-                    // fmt::print(stderr, "write mem[{}] = {:010x}\n", addr, value);
                     write_accesses[addr]++;
+
+                    size_t value = this->p_write__data.template get<size_t>();
                     memory[addr] = value;
                     memory_flips[addr] = 0;
                 } else {
-                    // fmt::print(stderr, "read mem[{}] = {:010x} ({:010x} -> {:010x})\n", addr, memory[addr], memory_flips[addr], memory[addr] ^ memory_flips[addr]);
                     read_accesses[addr]++;
 
-                    size_t current_flips = std::__popcount(memory_flips[addr]);
-                    read_with_errors[addr][current_flips]++;
-
-                    // if (current_flips > 1) {
-                    //     fmt::print(stderr, "reading mem[{}] with {} flips\n", addr, current_flips);
-                    // }
-
                     this->p_read__data.next.template set<size_t>(memory[addr]);
+                    prev_valid = true;
+                    prev_addr = addr;
                 }
             }
         } else if (this->negedge_p_clk()) {
+            // Check if there was a read on the positive edge
+            if (prev_valid) {
+                // Get the error and uncorrectable error lines passed back from the controller
+                bool error = this->p_error.template get<bool>();
+                bool uncorrectable_error = this->p_uncorrectable__error.template get<bool>();
+
+                // Update the read counters for this location
+                if (error && uncorrectable_error) {
+                    read_uncorrectable[prev_addr]++;
+                } else if (error) {
+                    read_correctable[prev_addr]++;
+                } else {
+                    read_clean[prev_addr]++;
+                }
+
+                prev_valid = false;
+            }
+
+            // Determine the number of flips to apply
             size_t flips = num_flips(generator);
             while(flips--) {
                 // Determine the cell to flip
@@ -115,31 +133,37 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
         }
         fmt::print(stderr_log, "total errors injected: {}\n", total_errors);
 
+        size_t locations_touched = 0;
         size_t total_errors_seen = 0;
+        size_t clean_reads = 0;
         size_t correctable_reads = 0;
         size_t uncorrectable_reads = 0;
         for (size_t i = 0; i < this->num_cells; i++) {
             if (this->read_accesses[i] || this->write_accesses[i]) {
+                locations_touched++;
                 total_errors_seen += this->errors_injected[i];
+
                 fmt::print(
                     stderr_log,
-                    "{:4d}: r:{:5d} w:{:5d} e:{:5d} rwe:{:5d} {:5d} {:5d}\n",
+                    "{:4d}: r:{:5d} w:{:5d} e:{:5d} rcl:{:5d} rco:{:5d} run:{:5d}\n",
                     i,
                     this->read_accesses[i],
                     this->write_accesses[i],
                     this->errors_injected[i],
-                    this->read_with_errors[i][0],
-                    this->read_with_errors[i][1],
-                    this->read_with_errors[i][2]
+                    this->read_clean[i],
+                    this->read_correctable[i],
+                    this->read_uncorrectable[i]
                 );
 
-                correctable_reads += this->read_with_errors[i][1];
-                for (size_t j = 2; j < num_bits; j++) {
-                    uncorrectable_reads += this->read_with_errors[i][j];
-                }
+                clean_reads += this->read_clean[i];
+                correctable_reads += this->read_correctable[i];
+                uncorrectable_reads += this->read_uncorrectable[i];
             }
         }
+        double touch_percent = 100.0 * (double) locations_touched / (double) num_cells;
+        fmt::print(stderr_log, "locations touched: {}/{} {:.2f}%\n", locations_touched, num_cells, touch_percent);
         fmt::print(stderr_log, "total errors seen: {}\n", total_errors_seen);
+        fmt::print(stderr_log, "total clean reads: {}\n", clean_reads);
         fmt::print(stderr_log, "total correctable reads: {}\n", correctable_reads);
         fmt::print(stderr_log, "total uncorrectable reads: {}\n", uncorrectable_reads);
     }
