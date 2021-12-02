@@ -1,0 +1,10 @@
+# nMigen packages
+git+https://github.com/nmigen/nmigen.git@0b28a97ca00b44301fb35e2426d571e4f6640040#egg=nmigen
+git+https://github.com/nmigen/nmigen-soc.git@d0e6c70a8802ec2263e9229a20d0ae40c7702441#egg=nmigen_soc
+
+# Memory controller generator and RISC-V core
+git+ssh://git@git.ics.ele.tue.nl/s158065/memory-controller-generator.git@ad916eba0d8d91b9bc3ca8402005357769de794d#egg=memory_controller_generator
+git+ssh://git@git.ics.ele.tue.nl/s158065/riscv-tilelink.git@7099eeba207090287c0df985feda0360c6f402b3#egg=riscv_tilelink
+
+# Matplotlib for plotting
+matplotlib~=3.5
