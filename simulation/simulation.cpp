@@ -282,7 +282,10 @@ int main(int argc, char *argv[]) {
         stdout_buf = std::cout.rdbuf();
         stderr_buf = std::cerr.rdbuf();
     } else {
-        auto stdout_path = fmt::format("log/{:.0e}-{}-out.txt", lambda, seed);
+        size_t lambda_scaled = (size_t) (lambda * 1000000.0);
+        size_t double_percent = (size_t) (double_rate * 100.0);
+
+        auto stdout_path = fmt::format("log/{}-{}-{}-out.txt", lambda_scaled, double_percent, seed);
         stdout_of.open(stdout_path);
         if (!stdout_of.is_open()) {
             fmt::print(stderr, "Unable to open '{}'\n", stdout_path);
@@ -290,7 +293,7 @@ int main(int argc, char *argv[]) {
         }
         stdout_buf = stdout_of.rdbuf();
 
-        auto stderr_path = fmt::format("log/{:.0e}-{}-err.txt", lambda, seed);
+        auto stderr_path = fmt::format("log/{}-{}-{}-err.txt", lambda_scaled, double_percent, seed);
         stderr_of.open(stderr_path);
         if (!stderr_of.is_open()) {
             fmt::print(stderr, "Unable to open '{}'\n", stderr_path);
