@@ -39,6 +39,7 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
     size_t read_clean[num_cells];
     size_t read_correctable[num_cells];
     size_t read_uncorrectable[num_cells];
+    size_t read_undetectable[num_cells];
 
     bool prev_valid = false;
     size_t prev_addr = 0;
@@ -91,6 +92,8 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
                     read_uncorrectable[prev_addr]++;
                 } else if (error) {
                     read_correctable[prev_addr]++;
+                } else if (memory_flips[prev_addr] != 0) {
+                    read_undetectable[prev_addr]++;
                 } else {
                     read_clean[prev_addr]++;
                 }
@@ -138,6 +141,7 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
         size_t clean_reads = 0;
         size_t correctable_reads = 0;
         size_t uncorrectable_reads = 0;
+        size_t undetectable_reads = 0;
         for (size_t i = 0; i < this->num_cells; i++) {
             if (this->read_accesses[i] || this->write_accesses[i]) {
                 locations_touched++;
@@ -145,19 +149,21 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
 
                 fmt::print(
                     stderr_log,
-                    "{:4d}: r:{:5d} w:{:5d} e:{:5d} rcl:{:5d} rco:{:5d} run:{:5d}\n",
+                    "{:4d}: r:{:5d} w:{:5d} e:{:5d} rcl:{:5d} rco:{:5d} ruc:{:5d} rud:{:5d}\n",
                     i,
                     this->read_accesses[i],
                     this->write_accesses[i],
                     this->errors_injected[i],
                     this->read_clean[i],
                     this->read_correctable[i],
-                    this->read_uncorrectable[i]
+                    this->read_uncorrectable[i],
+                    this->read_undetectable[i]
                 );
 
                 clean_reads += this->read_clean[i];
                 correctable_reads += this->read_correctable[i];
                 uncorrectable_reads += this->read_uncorrectable[i];
+                undetectable_reads += this->read_undetectable[i];
             }
         }
         double touch_percent = 100.0 * (double) locations_touched / (double) num_cells;
@@ -166,6 +172,7 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
         fmt::print(stderr_log, "total clean reads: {}\n", clean_reads);
         fmt::print(stderr_log, "total correctable reads: {}\n", correctable_reads);
         fmt::print(stderr_log, "total uncorrectable reads: {}\n", uncorrectable_reads);
+        fmt::print(stderr_log, "total undetectable reads: {}\n", undetectable_reads);
     }
 };
 
