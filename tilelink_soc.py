@@ -43,9 +43,9 @@ class TilelinkSOC(Elaboratable):
         m.submodules.tl_data_decoder = tl_data_decoder = TilelinkDecoder(addr_width=32, source_id_width=data_master.bus.source_id_width)
 
         tl_instr_rom = tilelink.Interface(addr_width=15, data_width=4, source_id_width=instruction_master.bus.source_id_width, sink_id_width=0)
-        tl_instr_ram = tilelink.Interface(addr_width=15, data_width=4, source_id_width=instruction_master.bus.source_id_width, sink_id_width=0)
+        tl_instr_ram = tilelink.Interface(addr_width=12, data_width=4, source_id_width=instruction_master.bus.source_id_width, sink_id_width=0)
         tl_data_rom = tilelink.Interface(addr_width=15, data_width=4, source_id_width=data_master.bus.source_id_width, sink_id_width=0)
-        tl_data_ram = tilelink.Interface(addr_width=15, data_width=4, source_id_width=data_master.bus.source_id_width, sink_id_width=0)
+        tl_data_ram = tilelink.Interface(addr_width=12, data_width=4, source_id_width=data_master.bus.source_id_width, sink_id_width=0)
 
         # Create an arbiter so both masters can access the same memory
         m.submodules.tl_rom_arbiter = tl_rom_arbiter = TilelinkArbiter([tl_instr_rom, tl_data_rom])
@@ -54,7 +54,7 @@ class TilelinkSOC(Elaboratable):
         # Create a ROM and RAM memory
         m.submodules.tl_rom = tl_rom = TilelinkMemory(addr_width=15, data_width=4, source_id_width=tl_rom_arbiter.source_id_width, init=self.firmware, read_only=True)
         m.submodules.tl_ram = tl_ram = TilelinkECCMemory(
-            addr_width=15, data_width=4, source_id_width=tl_ram_arbiter.source_id_width,
+            addr_width=12, data_width=4, source_id_width=tl_ram_arbiter.source_id_width,
             code_name=self.code_name, controller_name=self.controller_name
         )
 

@@ -27,7 +27,7 @@ namespace cxxrtl_design {
 
 template<size_t DATA_WIDTH>
 struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
-    static constexpr size_t num_cells = 8192;
+    static constexpr size_t num_cells = 1024;
     static constexpr size_t num_bits = DATA_WIDTH;
 
     size_t memory[num_cells];
