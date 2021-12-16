@@ -7,7 +7,7 @@ tilelink_soc.o: tilelink_soc.cpp
 	g++ ${CXXFLAGS} -c $^ -o $@
 
 tilelink_soc.cpp: tilelink_soc.v ../sim_dmem.v
-	yosys -p 'write_cxxrtl -g3 -header $@' $^
+	yosys -p 'write_cxxrtl -g3 -header $@' -f verilog $^
 
 tilelink_soc.v: ../../tilelink_soc.py
 	python ../../tilelink_soc.py --controller __CONTROLLER__ --code __CODE__ generate $@
