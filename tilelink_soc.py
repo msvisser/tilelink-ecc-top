@@ -20,7 +20,7 @@ class TilelinkSOC(Elaboratable):
 
         self.sim_output = Signal(unsigned(8))
         self.sim_output_valid = Signal()
-        self.halt_simulator = Signal()
+        self.halt_simulator = Signal(unsigned(6))
         self.tx_o = Signal()
 
     def elaborate(self, platform):
@@ -143,11 +143,12 @@ if __name__ == "__main__":
         def wait_for_halt_simulator():
             halt_simulator = False
             cycle = 0
-            while not halt_simulator:
+            while (halt_simulator & 1) == 0:
                 yield
                 halt_simulator = yield design.halt_simulator
                 cycle += 1
-            print(f"Halted simulator after {cycle} cycles")
+            code = (halt_simulator & 2) >> 1
+            print(f"Halted simulator after {cycle} cycles with code {code}")
 
         sim.add_clock(args.sync_period)
         sim.add_sync_process(print_output_process)

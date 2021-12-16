@@ -379,8 +379,9 @@ int main(int argc, char *argv[]) {
         }
 
         // Stop the simulation if halt_simulator is asserted
-        if (top.p_halt__simulator.get<bool>()) {
-            fmt::print(stderr_log, "Stopping simulator after {} cycles\n", clk_cycle);
+        size_t halt_simulator = top.p_halt__simulator.get<size_t>();
+        if ((halt_simulator & 1) != 0) {
+            fmt::print(stderr_log, "Stopping simulator after {} cycles with code {} ({})\n", clk_cycle, (halt_simulator >> 1) & 1, (halt_simulator >> 2) & 0xf);
             break;
         }
 
