@@ -18,8 +18,8 @@ class TilelinkSOC(Elaboratable):
         self.code_name = code_name
         self.controller_name = controller_name
 
-        self.output = Signal(unsigned(8))
-        self.output_valid = Signal()
+        self.sim_output = Signal(unsigned(8))
+        self.sim_output_valid = Signal()
         self.halt_simulator = Signal()
         self.tx_o = Signal()
 
@@ -60,8 +60,8 @@ class TilelinkSOC(Elaboratable):
 
         m.submodules.tl_periph = tl_periph = TilelinkSimulationPeripheral(source_id_width=tl_data_decoder.source_id_width)
         m.d.comb += [
-            self.output.eq(tl_periph.output),
-            self.output_valid.eq(tl_periph.output_valid),
+            self.sim_output.eq(tl_periph.sim_output),
+            self.sim_output_valid.eq(tl_periph.sim_output_valid),
             self.halt_simulator.eq(tl_periph.halt_simulator),
             core.external_interrupt.eq(tl_periph.external_interrupt),
         ]
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     firmware = os.path.join(dirname, 'firmware', 'test.bin')
 
     design = TilelinkSOC(firmware=firmware, code_name=args.code, controller_name=args.controller)
-    ports = [design.output, design.output_valid, design.halt_simulator]
+    ports = [design.sim_output, design.sim_output_valid, design.halt_simulator]
     name = "top"
 
     if args.action == "generate":
@@ -135,9 +135,9 @@ if __name__ == "__main__":
             yield Passive()
             while True:
                 yield
-                output_valid = yield design.output_valid
+                output_valid = yield design.sim_output_valid
                 if output_valid:
-                    output = yield design.output
+                    output = yield design.sim_output
                     print(chr(output & 0xff), end='')
 
         def wait_for_halt_simulator():
