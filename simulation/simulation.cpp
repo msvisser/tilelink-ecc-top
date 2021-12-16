@@ -41,6 +41,11 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
     size_t read_uncorrectable[num_cells];
     size_t read_undetectable[num_cells];
 
+    size_t clk_cycle = 0;
+#ifdef TRACK_OPERATION_TIMES
+    std::vector<size_t> operation_times[num_cells];
+#endif
+
     bool prev_valid = false;
     size_t prev_addr = 0;
 
@@ -79,7 +84,13 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
                     prev_valid = true;
                     prev_addr = addr;
                 }
+
+#ifdef TRACK_OPERATION_TIMES
+                operation_times[addr].push_back(clk_cycle);
+#endif
             }
+
+            clk_cycle++;
         } else if (this->negedge_p_clk()) {
             // Check if there was a read on the positive edge
             if (prev_valid) {
@@ -173,6 +184,18 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
         fmt::print(stderr_log, "total correctable reads: {}\n", correctable_reads);
         fmt::print(stderr_log, "total uncorrectable reads: {}\n", uncorrectable_reads);
         fmt::print(stderr_log, "total undetectable reads: {}\n", undetectable_reads);
+
+#ifdef TRACK_OPERATION_TIMES
+        for (size_t i = 0; i < this->num_cells; i++) {
+            if (this->read_accesses[i] || this->write_accesses[i]) {
+                fmt::print(stderr_log, "{:4d}:", i);
+                for (size_t time : this->operation_times[i]) {
+                    fmt::print(stderr_log, " {}", time);
+                }
+                fmt::print(stderr_log, "\n");
+            }
+        }
+#endif
     }
 };
 
