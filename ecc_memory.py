@@ -58,10 +58,11 @@ class TilelinkECCMemory(Elaboratable):
             controller.rsp.connect(wrapper.rsp_in),
         ]
 
-        # Create the memory and the read port
         if platform == "sim":
+            # Create the memory
             mem = Memory(width=self.code.total_bits, depth=self.memory_depth)
-            # Read port
+
+            # Create and connect the read port to the controller
             m.submodules.read_port = read_port = mem.read_port(transparent=False)
             m.d.comb += [
                 read_port.addr.eq(controller.sram.addr),
@@ -69,7 +70,7 @@ class TilelinkECCMemory(Elaboratable):
                 controller.sram.read_data.eq(read_port.data),
             ]
 
-            # Write port
+            # Create and connect the write port to the controller
             m.submodules.write_port = write_port = mem.write_port()
             m.d.comb += [
                 write_port.addr.eq(controller.sram.addr),
@@ -94,10 +95,12 @@ class TilelinkECCMemory(Elaboratable):
         else:
             assert False, f"unknown platform {platform}"
 
+        # Remember the last request
         last_a = Record.like(self.bus.a)
         with m.If(self.bus.a.ready):
             m.d.sync += last_a.eq(self.bus.a)
 
+        # Connect the Tilelink signals int the controller
         m.d.comb += [
             wrapper.req_in.valid.eq(self.bus.a.valid),
             self.bus.a.ready.eq(wrapper.req_in.ready),
@@ -111,6 +114,7 @@ class TilelinkECCMemory(Elaboratable):
             wrapper.rsp_out.ready.eq(self.bus.d.ready),
         ]
 
+        # Determine the response based on the last request
         with m.Switch(last_a.opcode):
             with m.Case(tilelink.ChannelAOpcode.Get):
                 m.d.comb += self.bus.tilelink_access_ack_data(
