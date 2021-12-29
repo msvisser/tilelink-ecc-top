@@ -1,13 +1,13 @@
 #!/usr/bin/bash
 set -e
 
-CONTROLLERS=(BasicController WriteBackController)
+CONTROLLERS=(BasicController WriteBackController RefreshController ForceRefreshController InsaneRefreshController TopRefreshController TopBottomRefreshController)
 CODES=(IdentityCode ParityCode HammingCode ExtendedHammingCode HsiaoCode HsiaoConstructedCode DuttaToubaCode SheLiCode)
 
 for controller in ${CONTROLLERS[@]}; do
     for code in ${CODES[@]}; do
         dir=${controller}-${code}
-        rm -rf ${dir}
+        # rm -rf ${dir}
 
         mkdir -p ${dir}
         mkdir -p ${dir}/log
@@ -17,4 +17,4 @@ for controller in ${CONTROLLERS[@]}; do
     done
 done
 
-parallel "make -C {1}-{2}" ::: ${CONTROLLERS[@]} ::: ${CODES[@]}
+parallel "make -C {1}-{2} clean simulation" ::: ${CONTROLLERS[@]} ::: ${CODES[@]}

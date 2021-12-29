@@ -4,3 +4,11 @@ tilelink_soc.h
 !sim_dmem.v
 BasicController-*/
 WriteBackController-*/
+RefreshController-*/
+ForceRefreshController-*/
+TopRefreshController-*/
+TopBottomRefreshController-*/
+InsaneRefreshController-*/
+*.pdf
+*.txt
+*.tex
