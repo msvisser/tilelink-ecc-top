@@ -21,7 +21,6 @@ class TilelinkSOC(Elaboratable):
         self.sim_output = Signal(unsigned(8))
         self.sim_output_valid = Signal()
         self.halt_simulator = Signal(unsigned(6))
-        self.tx_o = Signal()
 
     def ports(self):
         return [self.sim_output, self.sim_output_valid, self.halt_simulator]
