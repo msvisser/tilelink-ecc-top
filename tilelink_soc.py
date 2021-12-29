@@ -94,6 +94,7 @@ if __name__ == "__main__":
     parser = main_parser()
     parser.add_argument("--code", default="ExtendedHammingCode")
     parser.add_argument("--controller", default="WriteBackController")
+    parser.add_argument("--platform", default="cxxrtl")
     args = parser.parse_args()
 
     import os
@@ -105,7 +106,7 @@ if __name__ == "__main__":
     name = "top"
 
     if args.action == "generate":
-        fragment = Fragment.get(design, "cxxrtl")
+        fragment = Fragment.get(design, args.platform)
         generate_type = args.generate_type
         if generate_type is None and args.generate_file:
             if args.generate_file.name.endswith(".il"):
