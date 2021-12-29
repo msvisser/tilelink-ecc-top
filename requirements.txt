@@ -6,5 +6,7 @@ git+https://github.com/nmigen/nmigen-soc.git@d0e6c70a8802ec2263e9229a20d0ae40c77
 git+ssh://git@git.ics.ele.tue.nl/s158065/memory-controller-generator.git@ad916eba0d8d91b9bc3ca8402005357769de794d#egg=memory_controller_generator
 git+ssh://git@git.ics.ele.tue.nl/s158065/riscv-tilelink.git@7099eeba207090287c0df985feda0360c6f402b3#egg=riscv_tilelink
 
-# Matplotlib for plotting
+# Matplotlib and numpy for plotting
 matplotlib~=3.5
+numpy~=1.21
+
