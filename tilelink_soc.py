@@ -23,6 +23,9 @@ class TilelinkSOC(Elaboratable):
         self.halt_simulator = Signal(unsigned(6))
         self.tx_o = Signal()
 
+    def ports(self):
+        return [self.sim_output, self.sim_output_valid, self.halt_simulator]
+
     def elaborate(self, platform):
         m = Module()
 
@@ -102,7 +105,7 @@ if __name__ == "__main__":
     firmware = os.path.join(dirname, 'firmware', 'test.bin')
 
     design = TilelinkSOC(firmware=firmware, code_name=args.code, controller_name=args.controller)
-    ports = [design.sim_output, design.sim_output_valid, design.halt_simulator]
+    ports = design.ports()
     name = "top"
 
     if args.action == "generate":
