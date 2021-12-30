@@ -1,6 +1,6 @@
 # nMigen packages
-git+https://github.com/nmigen/nmigen.git@0b28a97ca00b44301fb35e2426d571e4f6640040#egg=nmigen
-git+https://github.com/nmigen/nmigen-soc.git@d0e6c70a8802ec2263e9229a20d0ae40c7702441#egg=nmigen_soc
+amaranth~=0.3
+amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc.git@217d4ea76ad3b3bbf146980d168bc7b3b9d95a18#egg=amaranth_soc
 
 # Memory controller generator and RISC-V core
 git+ssh://git@git.ics.ele.tue.nl/s158065/memory-controller-generator.git@ad916eba0d8d91b9bc3ca8402005357769de794d#egg=memory_controller_generator

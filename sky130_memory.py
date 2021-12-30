@@ -1,9 +1,9 @@
 import generator.controller
 import generator.error_correction
 from generator.controller import PartialWriteWrapper
-from nmigen import *
-from nmigen.hdl.rec import Direction
-from nmigen_soc.memory import MemoryMap
+from amaranth import *
+from amaranth.hdl.rec import Direction
+from amaranth_soc.memory import MemoryMap
 from riscv_tilelink import tilelink
 
 
