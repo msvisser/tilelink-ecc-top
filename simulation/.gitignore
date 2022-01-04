@@ -8,7 +8,7 @@ RefreshController-*/
 ForceRefreshController-*/
 TopRefreshController-*/
 TopBottomRefreshController-*/
-InsaneRefreshController-*/
+ContinuousRefreshController-*/
 *.pdf
 *.txt
 *.tex

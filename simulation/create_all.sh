@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 set -e
 
-CONTROLLERS=(BasicController WriteBackController RefreshController ForceRefreshController InsaneRefreshController TopRefreshController TopBottomRefreshController)
+CONTROLLERS=(BasicController WriteBackController RefreshController ForceRefreshController ContinuousRefreshController TopRefreshController TopBottomRefreshController)
 CODES=(IdentityCode ParityCode HammingCode ExtendedHammingCode HsiaoCode HsiaoConstructedCode DuttaToubaCode SheLiCode)
 
 for controller in ${CONTROLLERS[@]}; do

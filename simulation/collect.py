@@ -100,9 +100,9 @@ def collect(controller, code):
 
 
 def main():
-    controllers = ["BasicController", "WriteBackController", "RefreshController", "ForceRefreshController", "TopRefreshController", "TopBottomRefreshController", "InsaneRefreshController"]
+    controllers = ["BasicController", "WriteBackController", "RefreshController", "ForceRefreshController", "TopRefreshController", "TopBottomRefreshController", "ContinuousRefreshController"]
     controllers_normal = ["BasicController", "WriteBackController", "RefreshController"]
-    controllers_refresh = ["RefreshController", "ForceRefreshController", "TopRefreshController", "TopBottomRefreshController", "InsaneRefreshController"]
+    controllers_refresh = ["RefreshController", "ForceRefreshController", "TopRefreshController", "TopBottomRefreshController", "ContinuousRefreshController"]
     codes = ["IdentityCode", "ParityCode", "HammingCode", "ExtendedHammingCode", "HsiaoCode", "HsiaoConstructedCode", "DuttaToubaCode", "SheLiCode"]
 
     plt.rc('axes', titlesize=10)
