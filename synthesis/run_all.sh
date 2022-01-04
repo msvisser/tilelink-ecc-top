@@ -28,14 +28,17 @@ function docker_run {
 # done
 
 DESIGN_LIST=(
-  # BasicController-IdentityCode
-  # BasicController-ParityCode
-  # WriteBackController-HammingCode
-  # WriteBackController-HsiaoCode
-  # WriteBackController-SheLiCode
-  # RefreshController-HammingCode
-  # RefreshController-ExtendedHammingCode
-  # RefreshController-HsiaoCode
-  skycore
+  BasicController-IdentityCode
+  BasicController-ParityCode
+  WriteBackController-HammingCode
+  WriteBackController-HsiaoCode
+  WriteBackController-SheLiCode
+  RefreshController-HammingCode
+  RefreshController-ExtendedHammingCode
+  RefreshController-HsiaoCode
+  # BasicController-HsiaoCode
+  # BasicController-HsiaoConstructedCode
+  # BasicController-DuttaToubaCode
+  # BasicController-SheLiCode
 )
 docker_run ${DESIGN_LIST[@]}
