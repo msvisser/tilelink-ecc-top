@@ -6,7 +6,7 @@ CODES=(IdentityCode ParityCode HammingCode ExtendedHammingCode HsiaoCode HsiaoCo
 
 for controller in ${CONTROLLERS[@]}; do
     for code in ${CODES[@]}; do
-        dir=${controller}-${code}
+        dir=designs/${controller}-${code}
         # rm -rf ${dir}
 
         mkdir -p ${dir}
@@ -17,4 +17,4 @@ for controller in ${CONTROLLERS[@]}; do
     done
 done
 
-parallel "make -C {1}-{2} clean simulation" ::: ${CONTROLLERS[@]} ::: ${CODES[@]}
+parallel "make -C designs/{1}-{2} clean simulation" ::: ${CONTROLLERS[@]} ::: ${CODES[@]}

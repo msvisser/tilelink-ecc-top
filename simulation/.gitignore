@@ -1,14 +1,6 @@
 simulation
-tilelink_soc.cpp
-tilelink_soc.h
 !sim_dmem.v
-BasicController-*/
-WriteBackController-*/
-RefreshController-*/
-ForceRefreshController-*/
-TopRefreshController-*/
-TopBottomRefreshController-*/
-ContinuousRefreshController-*/
+designs/
 *.pdf
 *.txt
 *.tex

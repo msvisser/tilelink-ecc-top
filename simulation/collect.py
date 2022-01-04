@@ -46,7 +46,7 @@ class Results:
 
 
 def collect(controller, code):
-    dir_path = f"{controller}-{code}/log"
+    dir_path = f"designs/{controller}-{code}/log"
     all_logs = os.listdir(dir_path)
     prefixes = sorted(map(
         lambda x: x.removesuffix("-out.txt").rsplit("-", maxsplit=2),
