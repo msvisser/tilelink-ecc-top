@@ -1,6 +1,6 @@
-import generator.controller
-import generator.error_correction
-from generator.controller import PartialWriteWrapper
+import memory_controller_generator.controller
+import memory_controller_generator.error_correction
+from memory_controller_generator.controller import PartialWriteWrapper
 from amaranth import *
 from amaranth_soc.memory import MemoryMap
 from riscv_tilelink import tilelink
@@ -27,17 +27,17 @@ class TilelinkECCMemory(Elaboratable):
         self.memory_depth = 2 ** (self.addr_width - self.bus.addr_local_width)
 
         # Generate the error correction code matrices
-        if not hasattr(generator.error_correction, code_name):
+        if not hasattr(memory_controller_generator.error_correction, code_name):
             raise ValueError(f"Unknown code: {code_name}")
-        code_class = getattr(generator.error_correction, code_name)
+        code_class = getattr(memory_controller_generator.error_correction, code_name)
 
         self.code = code_class(data_bits=self.data_width_bits)
         self.code.generate_matrices_cached(timeout=30.0)
 
         # Generate the memory controller
-        if not hasattr(generator.controller, controller_name):
+        if not hasattr(memory_controller_generator.controller, controller_name):
             raise ValueError(f"Unknown controller: {controller_name}")
-        controller_class = getattr(generator.controller, controller_name)
+        controller_class = getattr(memory_controller_generator.controller, controller_name)
 
         self.controller = controller_class(
             self.code,
