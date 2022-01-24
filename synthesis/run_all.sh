@@ -14,7 +14,7 @@ function docker_run {
   -v ${PDK_ROOT}:${PDK_ROOT} -e PDK_ROOT=${PDK_ROOT} \
   -v ${DESIGNS_DIR}:/openlane/designs \
   ${DOCKER_OPTIONS} -it ${OPENLANE_IMAGE_NAME} \
-  python3 run_designs.py --threads 8 --tag test_batch $@
+  python3 run_designs.py --threads 16 --tag test_adj $@
 }
 
 # CONTROLLER_LIST=(BasicController WriteBackController RefreshController)
@@ -28,17 +28,29 @@ function docker_run {
 # done
 
 DESIGN_LIST=(
-  BasicController-IdentityCode
-  BasicController-ParityCode
-  WriteBackController-HammingCode
-  WriteBackController-HsiaoCode
-  WriteBackController-SheLiCode
-  RefreshController-HammingCode
-  RefreshController-ExtendedHammingCode
-  RefreshController-HsiaoCode
+  # BasicController-IdentityCode
+  # BasicController-ParityCode
+  # BasicController-HammingCode
+  # BasicController-ExtendedHammingCode
   # BasicController-HsiaoCode
   # BasicController-HsiaoConstructedCode
   # BasicController-DuttaToubaCode
   # BasicController-SheLiCode
+  # WriteBackController-IdentityCode
+  # WriteBackController-ParityCode
+  # WriteBackController-HammingCode
+  # WriteBackController-ExtendedHammingCode
+  # WriteBackController-HsiaoCode
+  # WriteBackController-HsiaoConstructedCode
+  # WriteBackController-DuttaToubaCode
+  # WriteBackController-SheLiCode
+  RefreshController-IdentityCode
+  RefreshController-ParityCode
+  # RefreshController-HammingCode
+  # RefreshController-ExtendedHammingCode
+  # RefreshController-HsiaoCode
+  # RefreshController-HsiaoConstructedCode
+  # RefreshController-DuttaToubaCode
+  # RefreshController-SheLiCode
 )
 docker_run ${DESIGN_LIST[@]}

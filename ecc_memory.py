@@ -5,6 +5,8 @@ from amaranth import *
 from amaranth_soc.memory import MemoryMap
 from riscv_tilelink import tilelink
 
+from skymem import SkyMem
+
 
 class TilelinkECCMemory(Elaboratable):
     counter = 0
@@ -94,6 +96,15 @@ class TilelinkECCMemory(Elaboratable):
                 i_flips=controller.debug.flips,
                 i_ignore=controller.debug.ignore,
             )
+        elif platform == "sky130":
+            m.submodules.memory = mem = SkyMem(self.code.total_bits, self.addr_width - self.bus.addr_local_width, 0)
+            m.d.comb += [
+                mem.addr.eq(controller.sram.addr),
+                mem.clk_en.eq(controller.sram.clk_en),
+                mem.write_en.eq(controller.sram.write_en),
+                mem.write_data.eq(controller.sram.write_data),
+                controller.sram.read_data.eq(mem.read_data),
+            ]
         else:
             assert False, f"unknown platform {platform}"
 
