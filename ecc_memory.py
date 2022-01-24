@@ -89,8 +89,10 @@ class TilelinkECCMemory(Elaboratable):
                 i_write_en=controller.sram.write_en,
                 i_write_data=controller.sram.write_data,
                 o_read_data=controller.sram.read_data,
-                i_error=controller.rsp.error,
-                i_uncorrectable_error=controller.rsp.uncorrectable_error,
+                i_error=controller.debug.error,
+                i_uncorrectable_error=controller.debug.uncorrectable_error,
+                i_flips=controller.debug.flips,
+                i_ignore=controller.debug.ignore,
             )
         else:
             assert False, f"unknown platform {platform}"

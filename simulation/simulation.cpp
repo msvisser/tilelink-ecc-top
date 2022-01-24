@@ -40,6 +40,7 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
     size_t read_correctable[num_cells];
     size_t read_uncorrectable[num_cells];
     size_t read_undetectable[num_cells];
+    bool touched_by_program[num_cells];
 
     size_t clk_cycle = 0;
 #ifdef TRACK_OPERATION_TIMES
@@ -97,16 +98,26 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
                 // Get the error and uncorrectable error lines passed back from the controller
                 bool error = this->p_error.template get<bool>();
                 bool uncorrectable_error = this->p_uncorrectable__error.template get<bool>();
+                size_t flips = this->p_flips.template get<size_t>();
+                bool ignore = this->p_ignore.template get<bool>();
 
-                // Update the read counters for this location
-                if (error && uncorrectable_error) {
-                    read_uncorrectable[prev_addr]++;
-                } else if (error) {
-                    read_correctable[prev_addr]++;
-                } else if (memory_flips[prev_addr] != 0) {
-                    read_undetectable[prev_addr]++;
-                } else {
-                    read_clean[prev_addr]++;
+                if (!ignore || touched_by_program[prev_addr]) {
+                    // Update the read counters for this location
+                    if (error && uncorrectable_error) {
+                        read_uncorrectable[prev_addr]++;
+                    } else if (error) {
+                        if (flips != memory_flips[prev_addr]) {
+                            read_undetectable[prev_addr]++;
+                        } else {
+                            read_correctable[prev_addr]++;
+                        }
+                    } else if (memory_flips[prev_addr] != 0) {
+                        read_undetectable[prev_addr]++;
+                    } else {
+                        read_clean[prev_addr]++;
+                    }
+
+                    touched_by_program[prev_addr] = true;
                 }
 
                 prev_valid = false;
@@ -160,7 +171,7 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
 
                 fmt::print(
                     stderr_log,
-                    "{:4d}: r:{:5d} w:{:5d} e:{:5d} rcl:{:5d} rco:{:5d} ruc:{:5d} rud:{:5d}\n",
+                    "{:4d}: r:{:5d} w:{:5d} e:{:5d} rcl:{:5d} rco:{:5d} ruc:{:5d} rud:{:5d} touched: {}\n",
                     i,
                     this->read_accesses[i],
                     this->write_accesses[i],
@@ -168,7 +179,8 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
                     this->read_clean[i],
                     this->read_correctable[i],
                     this->read_uncorrectable[i],
-                    this->read_undetectable[i]
+                    this->read_undetectable[i],
+                    this->touched_by_program[i]
                 );
 
                 clean_reads += this->read_clean[i];
