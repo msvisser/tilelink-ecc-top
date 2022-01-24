@@ -14,8 +14,8 @@ for controller in ${CONTROLLERS[@]}; do
     for code in ${CODES[@]}; do
         cd designs/${controller}-${code}
         echo "Starting ${controller}-${code}"
-        nice parallel -j28 "./simulation ${START_DIR}/../firmware/coremark-perf.bin --seed 0 --lambda 0 --double-rate {1} --max-cycles 5100000" ::: ${DOUBLE_RATES[@]} || true
-        nice parallel -j28 "./simulation ${START_DIR}/../firmware/coremark-perf.bin --seed {1} --lambda {2} --double-rate {3} --max-cycles 5100000" ::: ${RANGE[@]} ::: ${LAMBDAS[@]} ::: ${DOUBLE_RATES[@]} || true
+        nice parallel --bar -j28 "./simulation ${START_DIR}/../firmware/coremark-perf.bin --seed 0 --lambda 0 --double-rate {1} --max-cycles 5100000" ::: ${DOUBLE_RATES[@]} || true
+        nice parallel --bar -j28 "./simulation ${START_DIR}/../firmware/coremark-perf.bin --seed {1} --lambda {2} --double-rate {3} --max-cycles 5100000" ::: ${RANGE[@]} ::: ${LAMBDAS[@]} ::: ${DOUBLE_RATES[@]} || true
         echo "Done"
         cd ${START_DIR}
     done
