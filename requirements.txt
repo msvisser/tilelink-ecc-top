@@ -3,8 +3,8 @@ amaranth~=0.3
 amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc.git@217d4ea76ad3b3bbf146980d168bc7b3b9d95a18#egg=amaranth_soc
 
 # Memory controller generator and RISC-V core
-git+ssh://git@git.ics.ele.tue.nl/s158065/memory-controller-generator.git@2ffd83095fc125988d7ed20131cbb53d9ed01bbe#egg=memory_controller_generator
-git+ssh://git@git.ics.ele.tue.nl/s158065/riscv-tilelink.git@7a02d6163bd4971b7bde1991d608606e36290be8#egg=riscv_tilelink
+git+https://github.com/msvisser/memory-controller-generator.git@2ffd83095fc125988d7ed20131cbb53d9ed01bbe#egg=memory_controller_generator
+git+https://github.com/msvisser/riscv-tilelink.git@7a02d6163bd4971b7bde1991d608606e36290be8#egg=riscv_tilelink
 
 # Matplotlib and numpy for plotting
 matplotlib~=3.5
