@@ -83,6 +83,7 @@ class TilelinkECCMemory(Elaboratable):
             # Create a black-box memory instance which will be replaced in simulation
             m.submodules.memory = Instance(
                 "sim_dmem",
+                p_ADDR_WIDTH=self.addr_width - self.bus.addr_local_width,
                 p_DATA_WIDTH=self.code.total_bits,
                 i_clk=ClockSignal(),
                 i_rst=ResetSignal(),

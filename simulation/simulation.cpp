@@ -25,9 +25,9 @@ static size_t steps = 0;
 
 namespace cxxrtl_design {
 
-template<size_t DATA_WIDTH>
-struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
-    static constexpr size_t num_cells = 1024;
+template<size_t ADDR_WIDTH, size_t DATA_WIDTH>
+struct bb_p_memory_impl : public bb_p_sim__dmem<ADDR_WIDTH, DATA_WIDTH> {
+    static constexpr size_t num_cells = 1 << ADDR_WIDTH;
     static constexpr size_t num_bits = DATA_WIDTH;
 
     size_t memory[num_cells];
@@ -146,7 +146,7 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
                 }
             }
         }
-        return bb_p_sim__dmem<DATA_WIDTH>::eval();
+        return bb_p_sim__dmem<ADDR_WIDTH, DATA_WIDTH>::eval();
 	}
 
     void reset() override {}
@@ -211,29 +211,35 @@ struct bb_p_memory_impl : public bb_p_sim__dmem<DATA_WIDTH> {
     }
 };
 
-template<>
-std::unique_ptr<bb_p_sim__dmem<32>> bb_p_sim__dmem<32>::create(std::string, metadata_map, metadata_map) {
-    return std::make_unique<bb_p_memory_impl<32>>();
+// Allow casting bb_p_sim__dmem to bb_p_memory_impl with the same template parameters
+template<size_t ADDR_SIZE, size_t DATA_SIZE>
+bb_p_memory_impl<ADDR_SIZE, DATA_SIZE>* convert_to_impl(bb_p_sim__dmem<ADDR_SIZE, DATA_SIZE>* bb) {
+    return static_cast<bb_p_memory_impl<ADDR_SIZE, DATA_SIZE>*>(bb);
 }
 
 template<>
-std::unique_ptr<bb_p_sim__dmem<33>> bb_p_sim__dmem<33>::create(std::string, metadata_map, metadata_map) {
-    return std::make_unique<bb_p_memory_impl<33>>();
+std::unique_ptr<bb_p_sim__dmem<10, 32>> bb_p_sim__dmem<10, 32>::create(std::string, metadata_map, metadata_map) {
+    return std::make_unique<bb_p_memory_impl<10, 32>>();
 }
 
 template<>
-std::unique_ptr<bb_p_sim__dmem<38>> bb_p_sim__dmem<38>::create(std::string, metadata_map, metadata_map) {
-    return std::make_unique<bb_p_memory_impl<38>>();
+std::unique_ptr<bb_p_sim__dmem<10, 33>> bb_p_sim__dmem<10, 33>::create(std::string, metadata_map, metadata_map) {
+    return std::make_unique<bb_p_memory_impl<10, 33>>();
 }
 
 template<>
-std::unique_ptr<bb_p_sim__dmem<39>> bb_p_sim__dmem<39>::create(std::string, metadata_map, metadata_map) {
-    return std::make_unique<bb_p_memory_impl<39>>();
+std::unique_ptr<bb_p_sim__dmem<10, 38>> bb_p_sim__dmem<10, 38>::create(std::string, metadata_map, metadata_map) {
+    return std::make_unique<bb_p_memory_impl<10, 38>>();
 }
 
 template<>
-std::unique_ptr<bb_p_sim__dmem<40>> bb_p_sim__dmem<40>::create(std::string, metadata_map, metadata_map) {
-    return std::make_unique<bb_p_memory_impl<40>>();
+std::unique_ptr<bb_p_sim__dmem<10, 39>> bb_p_sim__dmem<10, 39>::create(std::string, metadata_map, metadata_map) {
+    return std::make_unique<bb_p_memory_impl<10, 39>>();
+}
+
+template<>
+std::unique_ptr<bb_p_sim__dmem<10, 40>> bb_p_sim__dmem<10, 40>::create(std::string, metadata_map, metadata_map) {
+    return std::make_unique<bb_p_memory_impl<10, 40>>();
 }
 
 }
@@ -444,21 +450,8 @@ int main(int argc, char *argv[]) {
     std::chrono::duration<double> diff = finish_time - start_time;
     fmt::print(stderr_log, "Simulation runtime: {:.3f}s\n", diff.count());
 
-    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<32>*>(top.cell_p_tl__ram_2e_memory.get())) {
-        p->log(stderr_log);
-    }
-    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<33>*>(top.cell_p_tl__ram_2e_memory.get())) {
-        p->log(stderr_log);
-    }
-    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<38>*>(top.cell_p_tl__ram_2e_memory.get())) {
-        p->log(stderr_log);
-    }
-    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<39>*>(top.cell_p_tl__ram_2e_memory.get())) {
-        p->log(stderr_log);
-    }
-    if (auto p = dynamic_cast<cxxrtl_design::bb_p_memory_impl<40>*>(top.cell_p_tl__ram_2e_memory.get())) {
-        p->log(stderr_log);
-    }
+    auto x = convert_to_impl(top.cell_p_tl__ram_2e_memory.get());
+    x->log(stderr_log);
 
     if (clk_cycle == max_cycles) {
         fmt::print(stdout_log, "\n");
