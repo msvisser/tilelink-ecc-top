@@ -26,22 +26,6 @@ with open('all.csv') as infile:
         design = row['design'][len(design_name_prefix):]
         design_dict[design] = row
 
-    # for controller in CONTROLLERS:
-    #     for code, bits in zip(CODES, CODE_BITS):
-    #         design = f"{controller}-{code}"
-    #         if design not in design_dict:
-    #             print(f"{design:45} missing results")
-    #             continue
-    #         row = design_dict[design]
-    #         clk_freq = float(row['suggested_clock_frequency'])
-    #         clk_period = float(row['suggested_clock_period'])
-    #         synth_area = float(row['synthesis_area_um^2'])
-    #         area = int(row['resizer_area_um^2'])
-    #         power = float(row['power_W']) * 1000.0
-    #         print(f"{design:45} {clk_freq:.2f} MHz  {clk_period:.2f} ns  {synth_area:9.3f} um^2  {area:9.2f} um^2  {power:.2f} mW")
-    #     print()
-
-
 CONTROLLERS = ["BasicController", "WriteBackController", "RefreshController"]
 CODES = ["IdentityCode", "ParityCode", "HammingCode", "ExtendedHammingCode", "HsiaoCode", "HsiaoConstructedCode", "DuttaToubaCode", "SheLiCode"]
 CODE_BITS = [32, 33, 38, 39, 39, 39, 39, 40]
@@ -75,12 +59,12 @@ for ci, controller in enumerate(CONTROLLERS):
         clk_freq = float(row['suggested_clock_frequency'])
         clk_period = float(row['suggested_clock_period'])
         synth_area = float(row['synthesis_area_um^2'])
-        area = int(row['resizer_area_um^2']) - total_memory_area[bits]
+        area = (int(row['resizer_area_um^2']) - total_memory_area[bits]) / 1e6
         level = int(row['level'])
-        die_area = float(row['DIEAREA_mm^2']) * 1_000_000
+        die_area = float(row['DIEAREA_mm^2'])
         power = float(row['power_W']) * 1_000
 
-        print(f"{design:50} {clk_freq:.2f} MHz  {clk_period:.2f} ns  {synth_area:9.3f} um^2  {area:9.3f} um^2  {die_area:.3f} um^2  {power:5.2f} mW")
+        print(f"{design:50} {clk_freq:.2f} MHz  {clk_period:.2f} ns  {synth_area:9.3f} um^2  {area:9.5f} mm^2  {die_area:.3f} um^2  {power:5.2f} mW")
 
         freqs.append(clk_freq)
         crits.append(clk_period)
@@ -112,20 +96,23 @@ ax_crit.set_xticks(xs, labels=CODES, rotation=30, ha="right", rotation_mode="anc
 ax_crit.yaxis.grid(True)
 ax_crit.set_ylabel("Time (ns)")
 ax_crit.legend(CONTROLLERS, loc="lower right")
+ax_crit.set_ylim((9, 13.5))
 fig_crit.tight_layout()
 fig_crit.savefig(f"tapeout-system-critical_path.pdf")
 
 ax_area.set_xticks(xs, labels=CODES, rotation=30, ha="right", rotation_mode="anchor")
 ax_area.yaxis.grid(True)
-ax_area.set_ylabel("Area ($\\mu m^2$)")
+ax_area.set_ylabel("Area ($mm^2$)")
 ax_area.legend(CONTROLLERS, loc="lower right")
+ax_area.set_ylim((0.24, 0.285))
 fig_area.tight_layout()
 fig_area.savefig(f"tapeout-system-area.pdf")
 
 ax_die_area.set_xticks(xs, labels=CODES, rotation=30, ha="right", rotation_mode="anchor")
 ax_die_area.yaxis.grid(True)
-ax_die_area.set_ylabel("Area ($\\mu m^2$)")
+ax_die_area.set_ylabel("Area ($mm^2$)")
 ax_die_area.legend(CONTROLLERS, loc="lower right")
+ax_die_area.set_ylim((2.5, 3.0))
 fig_die_area.tight_layout()
 fig_die_area.savefig(f"tapeout-system-die_area.pdf")
 

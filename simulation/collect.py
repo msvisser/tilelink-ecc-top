@@ -110,13 +110,13 @@ def main():
     codes = ["IdentityCode", "ParityCode", "HammingCode", "ExtendedHammingCode", "HsiaoCode", "HsiaoConstructedCode", "DuttaToubaCode", "SheLiCode"]
 
     plt.rc('axes', titlesize=10)
-    fig_stack_a, ax_stack_a = plt.subplots(nrows=4, ncols=3, figsize=[8.0, 11.0], sharey=True)
+    fig_stack_a, ax_stack_a = plt.subplots(nrows=4, ncols=3, figsize=[8.0, 10.5], sharey=True)
     fig_stack_a.suptitle("Double error rate = 0\\%")
-    fig_stack_b, ax_stack_b = plt.subplots(nrows=4, ncols=3, figsize=[8.0, 11.0], sharey=True)
+    fig_stack_b, ax_stack_b = plt.subplots(nrows=4, ncols=3, figsize=[8.0, 10.5], sharey=True)
     fig_stack_b.suptitle("Double error rate = 0\\%")
-    fig_stack_10_a, ax_stack_10_a = plt.subplots(nrows=4, ncols=3, figsize=[8.0, 11.0], sharey=True)
+    fig_stack_10_a, ax_stack_10_a = plt.subplots(nrows=4, ncols=3, figsize=[8.0, 10.5], sharey=True)
     fig_stack_10_a.suptitle("Double error rate = 10\\%")
-    fig_stack_10_b, ax_stack_10_b = plt.subplots(nrows=4, ncols=3, figsize=[8.0, 11.0], sharey=True)
+    fig_stack_10_b, ax_stack_10_b = plt.subplots(nrows=4, ncols=3, figsize=[8.0, 10.5], sharey=True)
     fig_stack_10_b.suptitle("Double error rate = 10\\%")
 
     fig_stack_refresh_a, ax_stack_refresh_a = plt.subplots(nrows=4, ncols=5, figsize=[12.0, 10.0], sharey=True)
@@ -132,7 +132,9 @@ def main():
     base_cycles = result[(0, 0)][0].cycles
 
     fig_cycles, ax_cycles = plt.subplots(nrows=1, ncols=3, figsize=[8.0, 4.0], sharey=True)
+    fig_cycles_10, ax_cycles_10 = plt.subplots(nrows=1, ncols=3, figsize=[8.0, 4.0], sharey=True)
     fig_cycles_refresh, ax_cycles_refresh = plt.subplots(nrows=1, ncols=5, figsize=[12.0, 4.0])
+    fig_cycles_refresh_10, ax_cycles_refresh_10 = plt.subplots(nrows=1, ncols=5, figsize=[12.0, 4.0])
 
     for controller_i, controller in enumerate(controllers):
         for code_i, code in enumerate(codes):
@@ -146,10 +148,11 @@ def main():
             plot_d0_stack = [[], [], [], [], []]
             plot_d10_stack = [[], [], [], [], []]
             plot_d0_cycles = []
+            plot_d10_cycles = []
             for key in sorted(result.keys()):
                 d, l = key
 
-                correct_results = list(filter(lambda x: x.correct, result[key]))
+                correct_results = list(filter(lambda x: x.correct and x.exit_code == 0 and x.total_undetectable_reads == 0, result[key]))
 
                 total = len(result[key])
                 correct = len(list(filter(lambda x: x.correct and x.exit_code == 0 and x.total_undetectable_reads == 0, result[key])))
@@ -165,13 +168,13 @@ def main():
                 uncorrectable_reads = list(map(lambda x: x.total_uncorrectable_reads, correct_results))
                 undetectable_reads = list(map(lambda x: x.total_undetectable_reads, correct_results))
 
-                if controller in controllers_normal:
-                    print(f"{l:4d} {d:2d}: {correct:3d} {cheated:3d} {incorrect:3d} {aborted:3d} {terminated:3d}/{total:3d} {np.average(clean_reads):.2f} {np.average(correctable_reads):.2f} {np.average(uncorrectable_reads):.2f} {np.average(undetectable_reads):.2f}")
+                # if controller in controllers_normal:
+                print(f"{l:4d} {d:2d}: {correct:3d} {cheated:3d} {incorrect:3d} {aborted:3d} {terminated:3d}/{total:3d} {np.average(clean_reads):.2f} {np.average(correctable_reads):.2f} {np.average(uncorrectable_reads):.2f} {np.average(undetectable_reads):.2f} {np.average(cycles):.2f}")
 
                 if d == 0:
                     # print(f"{avg(cycles)} ", end='')
 
-                    v = np.median(cycles)
+                    v = avg(reject_outliers(np.array(cycles)))
                     plot_d0_cycles.append(v)
 
                     plot_d0_x.append(l)
@@ -181,6 +184,9 @@ def main():
                     plot_d0_stack[3].append(100 * incorrect / total)
                     plot_d0_stack[4].append(100 * terminated / total)
                 else:
+                    v = avg(reject_outliers(np.array(cycles)))
+                    plot_d10_cycles.append(v)
+
                     plot_d10_x.append(l)
                     plot_d10_stack[0].append(100 * correct / total)
                     plot_d10_stack[1].append(100 * cheated / total)
@@ -243,7 +249,7 @@ def main():
                 ax_10.set_ybound(0, 100)
                 ax_10.grid(True, linewidth=0.5)
 
-            if code_i != 0:
+            if code not in ["IdentityCode", "ParityCode"]:
                 if controller in controllers_normal:
                     ci = controllers_normal.index(controller)
                     ax_cycles[ci].plot(plot_d0_x, plot_d0_cycles)
@@ -254,6 +260,15 @@ def main():
                         ax_cycles[ci].set_ylabel("Additional cycles")
                     ax_cycles[ci].set_xbound(0, 150)
                     ax_cycles[ci].set_ybound(-5, 105)
+
+                    ax_cycles_10[ci].plot(plot_d0_x, plot_d10_cycles)
+                    ax_cycles_10[ci].grid(True)
+                    ax_cycles_10[ci].set_title(f"{controller}")
+                    ax_cycles_10[ci].set_xlabel("Errors per clockcycle ($\\times 10^{-6}$)")
+                    if ci == 0:
+                        ax_cycles_10[ci].set_ylabel("Additional cycles")
+                    ax_cycles_10[ci].set_xbound(0, 150)
+                    ax_cycles_10[ci].set_ybound(-5, 105)
                 if controller in controllers_refresh:
                     ci = controllers_refresh.index(controller)
                     ax_cycles_refresh[ci].plot(plot_d0_x, plot_d0_cycles)
@@ -265,6 +280,16 @@ def main():
                     ax_cycles_refresh[ci].set_xbound(0, 150)
                     if ci != 1: # Skip ForceRefreshController
                         ax_cycles_refresh[ci].set_ybound(-5, 105)
+
+                    ax_cycles_refresh_10[ci].plot(plot_d0_x, plot_d10_cycles)
+                    ax_cycles_refresh_10[ci].grid(True)
+                    ax_cycles_refresh_10[ci].set_title(f"{controller}")
+                    ax_cycles_refresh_10[ci].set_xlabel("Errors per clockcycle ($\\times 10^{-6}$)")
+                    if ci == 0:
+                        ax_cycles_refresh_10[ci].set_ylabel("Additional cycles")
+                    ax_cycles_refresh_10[ci].set_xbound(0, 150)
+                    if ci != 1: # Skip ForceRefreshController
+                        ax_cycles_refresh_10[ci].set_ybound(-5, 105)
 
             if controller in controllers_normal:
                 print()
@@ -284,25 +309,31 @@ def main():
     fig_stack_10_b.tight_layout(rect=(0,0,1,0.97))
     fig_stack_10_b.savefig(f"stack-10-b.pdf")
 
-    fig_stack_refresh_a.legend(legend_labels, ncol=4)
+    fig_stack_refresh_a.legend(legend_labels, ncol=3)
     fig_stack_refresh_a.tight_layout(rect=(0,0,1,0.97))
     fig_stack_refresh_a.savefig("stack-refresh-a.pdf")
-    fig_stack_refresh_b.legend(legend_labels, ncol=4)
+    fig_stack_refresh_b.legend(legend_labels, ncol=3)
     fig_stack_refresh_b.tight_layout(rect=(0,0,1,0.97))
     fig_stack_refresh_b.savefig("stack-refresh-b.pdf")
-    fig_stack_refresh_10_a.legend(legend_labels, ncol=4)
+    fig_stack_refresh_10_a.legend(legend_labels, ncol=3)
     fig_stack_refresh_10_a.tight_layout(rect=(0,0,1,0.97))
     fig_stack_refresh_10_a.savefig("stack-refresh-10-a.pdf")
-    fig_stack_refresh_10_b.legend(legend_labels, ncol=4)
+    fig_stack_refresh_10_b.legend(legend_labels, ncol=3)
     fig_stack_refresh_10_b.tight_layout(rect=(0,0,1,0.97))
     fig_stack_refresh_10_b.savefig("stack-refresh-10-b.pdf")
 
-    fig_cycles.legend(codes[1:], loc="lower right", ncol=4)
+    fig_cycles.legend(codes[2:], loc="lower right", ncol=3)
     fig_cycles.tight_layout(rect=(0,0.1,1,1))
     fig_cycles.savefig("cycles.pdf")
-    fig_cycles_refresh.legend(codes[1:], loc="lower right", ncol=7)
+    fig_cycles_10.legend(codes[2:], loc="lower right", ncol=3)
+    fig_cycles_10.tight_layout(rect=(0,0.1,1,1))
+    fig_cycles_10.savefig("cycles-10.pdf")
+    fig_cycles_refresh.legend(codes[2:], loc="lower right", ncol=6)
     fig_cycles_refresh.tight_layout(rect=(0,0.08,1,1))
-    fig_cycles_refresh.savefig("cycles_refresh.pdf")
+    fig_cycles_refresh.savefig("cycles-refresh.pdf")
+    fig_cycles_refresh_10.legend(codes[2:], loc="lower right", ncol=6)
+    fig_cycles_refresh_10.tight_layout(rect=(0,0.08,1,1))
+    fig_cycles_refresh_10.savefig("cycles-refresh-10.pdf")
 
 
 if __name__ == "__main__":

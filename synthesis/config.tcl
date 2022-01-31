@@ -18,11 +18,11 @@ set ::env(GLB_RT_ADJUSTMENT) 0.05
 
 # CORE_UTIL not used if FP_SIZING is absolute
 set ::env(FP_SIZING) absolute
-# 32 set ::env(DIE_AREA) "0 0 1750 1500"
-# 33 set ::env(DIE_AREA) "0 0 1750 1500"
-# 38 set ::env(DIE_AREA) "0 0 1900 1500"
-# 39 set ::env(DIE_AREA) "0 0 1900 1500"
-# 40 set ::env(DIE_AREA) "0 0 1900 1500"
+# 32 set ::env(DIE_AREA) "0 0 1750 1550"
+# 33 set ::env(DIE_AREA) "0 0 1750 1550"
+# 38 set ::env(DIE_AREA) "0 0 1900 1550"
+# 39 set ::env(DIE_AREA) "0 0 1900 1550"
+# 40 set ::env(DIE_AREA) "0 0 1900 1550"
 
 set ::env(FP_PDN_VPITCH) 50
 set ::env(DIODE_INSERTION_STRATEGY) 5

@@ -2,15 +2,15 @@
 set -e
 
 DESIGN_LIST=(
-  BasicController-IdentityCode
+  BasicController-IdentityCode # gr 0.10
   BasicController-ParityCode
-  BasicController-HammingCode
+  BasicController-HammingCode # gr 0.10
   BasicController-ExtendedHammingCode
   BasicController-HsiaoCode
-  BasicController-HsiaoConstructedCode
-  BasicController-DuttaToubaCode
-  BasicController-SheLiCode
-  WriteBackController-IdentityCode
+  BasicController-HsiaoConstructedCode # pl 0.47 gr 0.10
+  BasicController-DuttaToubaCode # pl 0.40
+  BasicController-SheLiCode # pl 0.40 gr 0.10
+  WriteBackController-IdentityCode # gr 0.15
   WriteBackController-ParityCode
   WriteBackController-HammingCode
   WriteBackController-ExtendedHammingCode
@@ -18,17 +18,17 @@ DESIGN_LIST=(
   WriteBackController-HsiaoConstructedCode
   WriteBackController-DuttaToubaCode
   WriteBackController-SheLiCode
-  RefreshController-IdentityCode
-  # RefreshController-ParityCode
+  RefreshController-IdentityCode # gr 0.10
+  RefreshController-ParityCode
   RefreshController-HammingCode
   RefreshController-ExtendedHammingCode
-  RefreshController-HsiaoCode
+  RefreshController-HsiaoCode # pl 0.47
   RefreshController-HsiaoConstructedCode
   RefreshController-DuttaToubaCode
   RefreshController-SheLiCode
 )
 DESIGNS=( "${DESIGN_LIST[@]/#/designs\/}" )
-DESIGNS=( "${DESIGNS[@]/%/\/runs\/config_test_adj}" )
+DESIGNS=( "${DESIGNS[@]/%/\/runs\/config_test_taller}" )
 OUTPUT=all.csv
 
 sed -n '1p' ${DESIGNS[0]}/reports/final_summary_report.csv | tr -d '\n' > ${OUTPUT}
