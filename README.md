@@ -1,5 +1,5 @@
 # ECC memory controller test for RISC-V processor with Tilelink Peripherals
-This repository contains the setup to test the [ECC memory controller generator](https://git.ics.ele.tue.nl/s158065/memory-controller-generator) in combination with a [RISC-V core](https://git.ics.ele.tue.nl/s158065/riscv-tilelink) and some Tilelink peripherals.
+This repository contains the setup to test the [ECC memory controller generator](https://github.com/msvisser/memory-controller-generator) in combinartion with a [RISC-V core](https://github.com/msvisser/riscv-tilelink) and some Tilelink peripherals.
 
 ## Setup
 Using this repository requires the following programs to be installed:
